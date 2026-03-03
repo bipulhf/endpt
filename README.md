@@ -1,8 +1,8 @@
 # Endpt
 
 [![Release](https://img.shields.io/github/v/release/bipulhf/endpt?label=release)](https://github.com/bipulhf/endpt/releases)
-[![Build](https://img.shields.io/badge/build-not%20configured-lightgrey)](https://github.com/bipulhf/endpt/actions)
-[![License](https://img.shields.io/badge/license-not%20specified-lightgrey)](https://github.com/bipulhf/endpt)
+[![Build](https://github.com/bipulhf/endpt/actions/workflows/release.yml/badge.svg)](https://github.com/bipulhf/endpt/actions/workflows/release.yml)
+[![License](https://img.shields.io/github/license/bipulhf/endpt)](LICENSE)
 
 ![Endpt Logo](main_logo.png)
 
