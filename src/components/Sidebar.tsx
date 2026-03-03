@@ -1,4 +1,7 @@
 import { Download, FolderPlus, ChevronDown, ChevronRight, FilePlus, Trash2, Pencil, Upload } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { exportData, importData } from "../services/ipc";
 import { useWorkspaceStore } from "../store/useWorkspaceStore";
 import { HttpMethod } from "../types";
@@ -26,6 +29,7 @@ export const Sidebar = (): ReactElement => {
   const setActiveRequest = useWorkspaceStore((state) => state.setActiveRequest);
   const loadWorkspaceFromData = useWorkspaceStore((state) => state.loadWorkspaceFromData);
   const [newFolderName, setNewFolderName] = useState("");
+  const [search, setSearch] = useState("");
   const [error, setError] = useState("");
 
   const handleCreateFolder = (): void => {
@@ -40,9 +44,11 @@ export const Sidebar = (): ReactElement => {
     try {
       await exportData(workspace);
       setError("");
+      toast.success("Workspace exported");
     } catch (exportError) {
       const message = exportError instanceof Error ? exportError.message : "Export failed";
       setError(message);
+      toast.error(message);
     }
   };
 
@@ -51,11 +57,13 @@ export const Sidebar = (): ReactElement => {
       const data = await importData();
       if (data) {
         loadWorkspaceFromData(data);
+        toast.success("Workspace imported");
       }
       setError("");
     } catch (importError) {
       const message = importError instanceof Error ? importError.message : "Import failed";
       setError(message);
+      toast.error(message);
     }
   };
 
@@ -66,51 +74,79 @@ export const Sidebar = (): ReactElement => {
     }
   };
 
+  const normalizedSearch = search.trim().toLowerCase();
+
+  const filteredFolders = workspace.folders
+    .map((folder) => {
+      if (!normalizedSearch) {
+        return { folder, requests: folder.requests };
+      }
+
+      const folderMatch = folder.name.toLowerCase().includes(normalizedSearch);
+      if (folderMatch) {
+        return { folder, requests: folder.requests };
+      }
+
+      const requests = folder.requests.filter((request) =>
+        [request.name, request.url, request.method].join(" ").toLowerCase().includes(normalizedSearch),
+      );
+
+      return { folder, requests };
+    })
+    .filter(({ requests }) => requests.length > 0);
+
   return (
     <aside className="flex h-full w-full flex-col border-r border-border bg-card">
       <div className="border-b border-border p-4">
         <h1 className="text-lg font-semibold text-foreground">postman-lite</h1>
         <div className="mt-3 flex gap-2">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleImport}
-            className="inline-flex items-center gap-1 rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-muted"
           >
             <Upload size={14} />
             Import
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleExport}
-            className="inline-flex items-center gap-1 rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-muted"
           >
             <Download size={14} />
             Export
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="border-b border-border p-3">
+        <div className="mb-2">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search requests..."
+            className="h-8 px-2"
+          />
+        </div>
         <div className="flex gap-2">
-          <input
+          <Input
             value={newFolderName}
             onChange={(event) => setNewFolderName(event.target.value)}
             placeholder="Folder name"
-            className="w-full rounded border border-input bg-background px-2 py-1 text-sm text-foreground outline-none focus:border-primary"
+            className="h-8 px-2"
           />
-          <button
-            type="button"
+          <Button
+            size="icon"
             onClick={handleCreateFolder}
-            className="inline-flex items-center justify-center rounded bg-primary px-2 py-1 text-primary-foreground hover:opacity-90"
             aria-label="New folder"
           >
             <FolderPlus size={16} />
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
-        {workspace.folders.map((folder) => (
+        {filteredFolders.map(({ folder, requests }) => (
           <div key={folder.id} className="mb-2 rounded border border-border bg-background/40">
             <div className="flex items-center gap-1 p-2">
               <button
@@ -150,7 +186,7 @@ export const Sidebar = (): ReactElement => {
 
             {!folder.collapsed && (
               <div className="space-y-1 px-2 pb-2">
-                {folder.requests.map((request) => (
+                {requests.map((request) => (
                   <div
                     key={request.id}
                     className={`flex items-center gap-2 rounded px-2 py-1 ${activeRequestId === request.id ? "bg-primary/15" : "hover:bg-muted"

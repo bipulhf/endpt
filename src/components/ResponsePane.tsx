@@ -1,5 +1,7 @@
 import { Copy } from "lucide-react";
 import { ReactElement, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Badge } from "./ui/badge";
 import { formatBytes, getStatusText } from "../lib/utils";
 import { HttpResponse } from "../types";
 
@@ -8,17 +10,17 @@ interface ResponsePaneProps {
   isSending: boolean;
 }
 
-const statusClass = (status: number): string => {
+const statusClass = (status: number): "success" | "info" | "warning" | "danger" => {
   if (status >= 200 && status < 300) {
-    return "bg-green-900 text-green-400";
+    return "success";
   }
   if (status >= 300 && status < 400) {
-    return "bg-blue-900 text-blue-400";
+    return "info";
   }
   if (status >= 400 && status < 500) {
-    return "bg-amber-900 text-amber-400";
+    return "warning";
   }
-  return "bg-red-900 text-red-400";
+  return "danger";
 };
 
 export const ResponsePane = ({ response, isSending }: ResponsePaneProps): ReactElement => {
@@ -44,7 +46,12 @@ export const ResponsePane = ({ response, isSending }: ResponsePaneProps): ReactE
     if (!response?.body) {
       return;
     }
-    await navigator.clipboard.writeText(response.body);
+    try {
+      await navigator.clipboard.writeText(response.body);
+      toast.success("Response body copied");
+    } catch {
+      toast.error("Failed to copy response body");
+    }
   };
 
   return (
@@ -52,15 +59,15 @@ export const ResponsePane = ({ response, isSending }: ResponsePaneProps): ReactE
       <div className="flex items-center gap-2 border-b border-border px-4 py-2">
         {response && (
           <>
-            <span className={`rounded px-2 py-1 text-xs font-semibold ${statusClass(response.status)}`}>
+            <Badge variant={statusClass(response.status)}>
               {response.status} {getStatusText(response.status)}
-            </span>
-            <span className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
+            </Badge>
+            <Badge variant="muted">
               {response.elapsed_ms} ms
-            </span>
-            <span className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
+            </Badge>
+            <Badge variant="muted">
               {formatBytes(response.size_bytes)}
-            </span>
+            </Badge>
           </>
         )}
         <div className="ml-auto flex items-center gap-2">

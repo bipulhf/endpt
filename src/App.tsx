@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
+import { Toaster } from "sonner";
 import { RequestEditor } from "./components/RequestEditor";
 import { ResponsePane } from "./components/ResponsePane";
 import { Sidebar } from "./components/Sidebar";
@@ -18,6 +19,7 @@ function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+      <Toaster richColors position="bottom-right" />
       <Group orientation="horizontal" className="h-full w-full">
         <Panel defaultSize={24} minSize={16} maxSize={32}>
           <Sidebar />

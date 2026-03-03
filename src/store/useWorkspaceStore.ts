@@ -4,6 +4,7 @@ import { ApiRequest, HeaderRow, RequestBody, Workspace } from "../types";
 interface WorkspaceState {
   workspace: Workspace;
   activeRequestId: string | null;
+  openRequestIds: string[];
   createFolder: (name: string) => void;
   deleteFolder: (folderId: string) => void;
   renameFolder: (folderId: string, name: string) => void;
@@ -12,6 +13,7 @@ interface WorkspaceState {
   deleteRequest: (folderId: string, requestId: string) => void;
   updateRequest: (requestId: string, partial: Partial<ApiRequest>) => void;
   setActiveRequest: (id: string | null) => void;
+  closeRequestTab: (id: string) => void;
   getActiveRequest: () => ApiRequest | undefined;
   loadWorkspaceFromData: (data: Workspace) => void;
 }
@@ -95,9 +97,13 @@ const defaultWorkspace: Workspace = {
   folders: [],
 };
 
+const getAllRequestIds = (workspace: Workspace): string[] =>
+  workspace.folders.flatMap((folder) => folder.requests.map((request) => request.id));
+
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   workspace: defaultWorkspace,
   activeRequestId: null,
+  openRequestIds: [],
 
   createFolder: (name) => {
     const trimmedName = name.trim();
@@ -119,8 +125,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   deleteFolder: (folderId) => {
     set((state) => {
       const folder = state.workspace.folders.find((item) => item.id === folderId);
+      const removedRequestIds = new Set(folder?.requests.map((request) => request.id) ?? []);
       const removedActive =
         folder?.requests.some((request) => request.id === state.activeRequestId) ?? false;
+      const openRequestIds = state.openRequestIds.filter((requestId) => !removedRequestIds.has(requestId));
 
       return {
         workspace: {
@@ -128,6 +136,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
           folders: state.workspace.folders.filter((folderItem) => folderItem.id !== folderId),
         },
         activeRequestId: removedActive ? null : state.activeRequestId,
+        openRequestIds,
       };
     });
   },
@@ -173,6 +182,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         ),
       },
       activeRequestId: request.id,
+      openRequestIds: state.openRequestIds.includes(request.id)
+        ? state.openRequestIds
+        : [...state.openRequestIds, request.id],
     }));
   },
 
@@ -190,6 +202,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         ),
       },
       activeRequestId: state.activeRequestId === requestId ? null : state.activeRequestId,
+      openRequestIds: state.openRequestIds.filter((id) => id !== requestId),
     }));
   },
 
@@ -208,7 +221,45 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   setActiveRequest: (id) => {
-    set({ activeRequestId: id });
+    set((state) => {
+      if (!id) {
+        return { activeRequestId: null };
+      }
+
+      return {
+        activeRequestId: id,
+        openRequestIds: state.openRequestIds.includes(id)
+          ? state.openRequestIds
+          : [...state.openRequestIds, id],
+      };
+    });
+  },
+
+  closeRequestTab: (id) => {
+    set((state) => {
+      const closeIndex = state.openRequestIds.indexOf(id);
+      if (closeIndex < 0) {
+        return {};
+      }
+
+      const openRequestIds = state.openRequestIds.filter((requestId) => requestId !== id);
+      const isActiveClosing = state.activeRequestId === id;
+
+      if (!isActiveClosing) {
+        return { openRequestIds };
+      }
+
+      const fallbackId =
+        openRequestIds[closeIndex] ??
+        openRequestIds[closeIndex - 1] ??
+        getAllRequestIds(state.workspace)[0] ??
+        null;
+
+      return {
+        openRequestIds,
+        activeRequestId: fallbackId,
+      };
+    });
   },
 
   getActiveRequest: () => {
@@ -223,6 +274,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   loadWorkspaceFromData: (data) => {
-    set({ workspace: normalizeWorkspace(data), activeRequestId: null });
+    set({
+      workspace: normalizeWorkspace(data),
+      activeRequestId: null,
+      openRequestIds: [],
+    });
   },
 }));

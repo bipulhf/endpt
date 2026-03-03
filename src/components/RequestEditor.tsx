@@ -1,6 +1,8 @@
 import { Send } from "lucide-react";
 import { ReactElement, useMemo, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { toast } from "sonner";
+import { RequestTabs } from "./RequestTabs";
 import { executeHttpRequest } from "../services/ipc";
 import { useWorkspaceStore } from "../store/useWorkspaceStore";
 import { BodyType, FormDataRow, HeaderRow, HttpMethod, HttpResponse, RawLanguage, RequestBody } from "../types";
@@ -33,10 +35,23 @@ const rawLanguages: RawLanguage[] = ["text", "json", "xml", "html", "javascript"
 
 export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEditorProps): ReactElement => {
   const activeRequestId = useWorkspaceStore((state) => state.activeRequestId);
+  const openRequestIds = useWorkspaceStore((state) => state.openRequestIds);
   const workspace = useWorkspaceStore((state) => state.workspace);
   const updateRequest = useWorkspaceStore((state) => state.updateRequest);
+  const setActiveRequest = useWorkspaceStore((state) => state.setActiveRequest);
+  const closeRequestTab = useWorkspaceStore((state) => state.closeRequestTab);
   const [activeTab, setActiveTab] = useState<"headers" | "body">("headers");
   const [error, setError] = useState("");
+
+  const requestMap = useMemo(() => {
+    const entries = workspace.folders.flatMap((folder) => folder.requests.map((request) => [request.id, request] as const));
+    return new Map(entries);
+  }, [workspace.folders]);
+
+  const openTabs = useMemo(
+    () => openRequestIds.map((id) => requestMap.get(id)).filter((item): item is NonNullable<typeof item> => Boolean(item)),
+    [openRequestIds, requestMap],
+  );
 
   const activeRequest = useMemo(() => {
     for (const folder of workspace.folders) {
@@ -134,9 +149,11 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
     try {
       const response = await executeHttpRequest(activeRequest);
       onResponse(response);
+      toast.success(`Response ${response.status}`);
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : "Request failed";
       setError(message);
+      toast.error(message);
     } finally {
       setIsSending(false);
     }
@@ -152,6 +169,17 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
+      <RequestTabs
+        tabs={openTabs.map((request) => ({
+          id: request.id,
+          name: request.name,
+          method: request.method,
+        }))}
+        activeRequestId={activeRequestId}
+        onSelect={setActiveRequest}
+        onClose={closeRequestTab}
+      />
+
       <div className="mb-3 flex items-center gap-2">
         <select
           value={activeRequest.method}
