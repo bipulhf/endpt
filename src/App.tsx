@@ -20,22 +20,17 @@ function App() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
       <Toaster richColors position="bottom-right" />
-      <Group
-        orientation="horizontal"
-        className="h-full w-full"
-        defaultLayout={{ sidebar: 22, main: 78 }}
-      >
-        <Panel id="sidebar" defaultSize={22} minSize={16} maxSize={40}>
+      <Group orientation="horizontal" className="h-full w-full">
+        <Panel id="sidebar" defaultSize={280} minSize={250} maxSize={450}>
           <Sidebar />
         </Panel>
-        <Separator className="w-1.5 cursor-col-resize bg-border/60 transition-colors hover:bg-primary/60 active:bg-primary" />
-        <Panel id="main">
-          <Group
-            orientation="vertical"
-            className="h-full"
-            defaultLayout={{ editor: 60, response: 40 }}
-          >
-            <Panel id="editor" defaultSize={60} minSize={30}>
+        <Separator
+          className="bg-border transition-colors hover:bg-primary/60 active:bg-primary data-[separator]:cursor-col-resize"
+          style={{ width: 6 }}
+        />
+        <Panel id="main" defaultSize={75} minSize={40}>
+          <Group orientation="vertical" className="h-full">
+            <Panel id="editor" defaultSize={55} minSize={25}>
               <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
                 <div className="flex items-center justify-end border-b border-border px-4 py-2">
                   <ThemeToggle />
@@ -47,8 +42,11 @@ function App() {
                 />
               </div>
             </Panel>
-            <Separator className="h-1.5 cursor-row-resize bg-border/60 transition-colors hover:bg-primary/60 active:bg-primary" />
-            <Panel id="response" defaultSize={40} minSize={20}>
+            <Separator
+              className="bg-border transition-colors hover:bg-primary/60 active:bg-primary data-[separator]:cursor-row-resize"
+              style={{ height: 6 }}
+            />
+            <Panel id="response" defaultSize={250} minSize={200}>
               <ResponsePane response={response} isSending={isSending} />
             </Panel>
           </Group>
