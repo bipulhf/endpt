@@ -7,11 +7,45 @@ export type HttpMethod =
   | "HEAD"
   | "OPTIONS";
 
+export type BodyType =
+  | "none"
+  | "json"
+  | "raw"
+  | "form-data"
+  | "x-www-form-urlencoded"
+  | "binary"
+  | "graphql";
+
+export type RawLanguage = "text" | "json" | "xml" | "html" | "javascript";
+
 export interface HeaderRow {
   id: string;
   key: string;
   value: string;
   enabled: boolean;
+}
+
+export interface FormDataRow {
+  id: string;
+  key: string;
+  value: string;
+  type: "text" | "file";
+  enabled: boolean;
+}
+
+export interface GraphQLBody {
+  query: string;
+  variables: string;
+}
+
+export interface RequestBody {
+  type: BodyType;
+  raw: string;
+  rawLanguage: RawLanguage;
+  formData: FormDataRow[];
+  urlEncoded: FormDataRow[];
+  binaryFilePath: string | null;
+  graphql: GraphQLBody;
 }
 
 export interface ApiRequest {
@@ -20,7 +54,7 @@ export interface ApiRequest {
   method: HttpMethod;
   url: string;
   headers: HeaderRow[];
-  body: string;
+  body: RequestBody;
 }
 
 export interface Folder {
@@ -40,4 +74,5 @@ export interface HttpResponse {
   headers: Record<string, string>;
   body: string;
   elapsed_ms: number;
+  size_bytes: number;
 }

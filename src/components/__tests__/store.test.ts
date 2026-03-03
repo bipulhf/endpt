@@ -3,7 +3,7 @@ import { useWorkspaceStore } from "../../store/useWorkspaceStore";
 
 beforeEach(() => {
   useWorkspaceStore.setState({
-    workspace: { version: 1, folders: [] },
+    workspace: { version: 2, folders: [] },
     activeRequestId: null,
   });
 });
@@ -39,6 +39,7 @@ describe("createRequest", () => {
     expect(updated.requests).toHaveLength(1);
     expect(updated.requests[0].name).toBe("Login");
     expect(updated.requests[0].method).toBe("GET");
+    expect(updated.requests[0].body.type).toBe("none");
   });
 
   it("sets the new request as active", () => {

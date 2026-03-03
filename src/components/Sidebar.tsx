@@ -67,14 +67,14 @@ export const Sidebar = (): ReactElement => {
   };
 
   return (
-    <aside className="flex h-full w-72 flex-col border-r border-gray-800 bg-gray-900">
-      <div className="border-b border-gray-800 p-4">
-        <h1 className="text-lg font-semibold text-gray-100">postman-lite</h1>
+    <aside className="flex h-full w-full flex-col border-r border-border bg-card">
+      <div className="border-b border-border p-4">
+        <h1 className="text-lg font-semibold text-foreground">postman-lite</h1>
         <div className="mt-3 flex gap-2">
           <button
             type="button"
             onClick={handleImport}
-            className="inline-flex items-center gap-1 rounded bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700"
+            className="inline-flex items-center gap-1 rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-muted"
           >
             <Upload size={14} />
             Import
@@ -82,7 +82,7 @@ export const Sidebar = (): ReactElement => {
           <button
             type="button"
             onClick={handleExport}
-            className="inline-flex items-center gap-1 rounded bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700"
+            className="inline-flex items-center gap-1 rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground hover:bg-muted"
           >
             <Download size={14} />
             Export
@@ -90,18 +90,18 @@ export const Sidebar = (): ReactElement => {
         </div>
       </div>
 
-      <div className="border-b border-gray-800 p-3">
+      <div className="border-b border-border p-3">
         <div className="flex gap-2">
           <input
             value={newFolderName}
             onChange={(event) => setNewFolderName(event.target.value)}
             placeholder="Folder name"
-            className="w-full rounded border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-100 outline-none focus:border-indigo-500"
+            className="w-full rounded border border-input bg-background px-2 py-1 text-sm text-foreground outline-none focus:border-primary"
           />
           <button
             type="button"
             onClick={handleCreateFolder}
-            className="inline-flex items-center justify-center rounded bg-indigo-600 px-2 py-1 text-white hover:bg-indigo-500"
+            className="inline-flex items-center justify-center rounded bg-primary px-2 py-1 text-primary-foreground hover:opacity-90"
             aria-label="New folder"
           >
             <FolderPlus size={16} />
@@ -111,21 +111,21 @@ export const Sidebar = (): ReactElement => {
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {workspace.folders.map((folder) => (
-          <div key={folder.id} className="mb-2 rounded border border-gray-800 bg-gray-950/40">
+          <div key={folder.id} className="mb-2 rounded border border-border bg-background/40">
             <div className="flex items-center gap-1 p-2">
               <button
                 type="button"
                 onClick={() => toggleFolderCollapse(folder.id)}
-                className="rounded p-1 text-gray-300 hover:bg-gray-800"
+                className="rounded p-1 text-muted-foreground hover:bg-muted"
                 aria-label="Toggle folder"
               >
                 {folder.collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
               </button>
-              <span className="flex-1 truncate text-sm text-gray-100">{folder.name}</span>
+              <span className="flex-1 truncate text-sm text-foreground">{folder.name}</span>
               <button
                 type="button"
                 onClick={() => createRequest(folder.id, "New Request")}
-                className="rounded p-1 text-gray-300 hover:bg-gray-800"
+                className="rounded p-1 text-muted-foreground hover:bg-muted"
                 aria-label="New request"
               >
                 <FilePlus size={14} />
@@ -133,7 +133,7 @@ export const Sidebar = (): ReactElement => {
               <button
                 type="button"
                 onClick={() => handleRenameFolder(folder.id, folder.name)}
-                className="rounded p-1 text-gray-300 hover:bg-gray-800"
+                className="rounded p-1 text-muted-foreground hover:bg-muted"
                 aria-label="Rename folder"
               >
                 <Pencil size={14} />
@@ -141,7 +141,7 @@ export const Sidebar = (): ReactElement => {
               <button
                 type="button"
                 onClick={() => deleteFolder(folder.id)}
-                className="rounded p-1 text-red-300 hover:bg-gray-800"
+                className="rounded p-1 text-red-500 hover:bg-muted"
                 aria-label="Delete folder"
               >
                 <Trash2 size={14} />
@@ -153,7 +153,7 @@ export const Sidebar = (): ReactElement => {
                 {folder.requests.map((request) => (
                   <div
                     key={request.id}
-                    className={`flex items-center gap-2 rounded px-2 py-1 ${activeRequestId === request.id ? "bg-indigo-600/20" : "hover:bg-gray-800"
+                    className={`flex items-center gap-2 rounded px-2 py-1 ${activeRequestId === request.id ? "bg-primary/15" : "hover:bg-muted"
                       }`}
                   >
                     <button
@@ -164,12 +164,12 @@ export const Sidebar = (): ReactElement => {
                       <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${methodClasses[request.method]}`}>
                         {request.method}
                       </span>
-                      <span className="truncate text-xs text-gray-200">{request.name}</span>
+                      <span className="truncate text-xs text-foreground">{request.name}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => deleteRequest(folder.id, request.id)}
-                      className="rounded p-1 text-red-300 hover:bg-gray-700"
+                      className="rounded p-1 text-red-500 hover:bg-muted"
                       aria-label="Delete request"
                     >
                       <Trash2 size={12} />
@@ -182,7 +182,7 @@ export const Sidebar = (): ReactElement => {
         ))}
       </div>
 
-      {error && <div className="border-t border-gray-800 p-2 text-xs text-red-300">{error}</div>}
+      {error && <div className="border-t border-border p-2 text-xs text-red-500">{error}</div>}
     </aside>
   );
 };

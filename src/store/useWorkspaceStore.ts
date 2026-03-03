@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ApiRequest, HeaderRow, Workspace } from "../types";
+import { ApiRequest, HeaderRow, RequestBody, Workspace } from "../types";
 
 interface WorkspaceState {
   workspace: Workspace;
@@ -30,17 +30,68 @@ const createDefaultHeader = (): HeaderRow => ({
   enabled: true,
 });
 
+const createDefaultBody = (): RequestBody => ({
+  type: "none",
+  raw: "",
+  rawLanguage: "text",
+  formData: [],
+  urlEncoded: [],
+  binaryFilePath: null,
+  graphql: {
+    query: "",
+    variables: "",
+  },
+});
+
+const normalizeBody = (body: unknown): RequestBody => {
+  if (typeof body === "string") {
+    return {
+      ...createDefaultBody(),
+      type: body.trim().length > 0 ? "json" : "none",
+      raw: body,
+      rawLanguage: "json",
+    };
+  }
+
+  if (!body || typeof body !== "object") {
+    return createDefaultBody();
+  }
+
+  const partial = body as Partial<RequestBody>;
+  return {
+    ...createDefaultBody(),
+    ...partial,
+    graphql: {
+      ...createDefaultBody().graphql,
+      ...(partial.graphql ?? {}),
+    },
+    formData: Array.isArray(partial.formData) ? partial.formData : [],
+    urlEncoded: Array.isArray(partial.urlEncoded) ? partial.urlEncoded : [],
+  };
+};
+
+const normalizeWorkspace = (data: Workspace): Workspace => ({
+  version: 2,
+  folders: data.folders.map((folder) => ({
+    ...folder,
+    requests: folder.requests.map((request) => ({
+      ...request,
+      body: normalizeBody(request.body),
+    })),
+  })),
+});
+
 const createDefaultRequest = (name: string): ApiRequest => ({
   id: createId(),
   name,
   method: "GET",
   url: "",
   headers: [createDefaultHeader()],
-  body: "",
+  body: createDefaultBody(),
 });
 
 const defaultWorkspace: Workspace = {
-  version: 1,
+  version: 2,
   folders: [],
 };
 
@@ -172,6 +223,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   loadWorkspaceFromData: (data) => {
-    set({ workspace: data, activeRequestId: null });
+    set({ workspace: normalizeWorkspace(data), activeRequestId: null });
   },
 }));

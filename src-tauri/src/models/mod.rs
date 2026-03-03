@@ -15,6 +15,14 @@ pub struct HttpResponsePayload {
     pub headers: HashMap<String, String>,
     pub body: String,
     pub elapsed_ms: u64,
+    pub size_bytes: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FormPart {
+    pub key: String,
+    pub value: String,
+    pub part_type: String,
 }
 
 #[cfg(test)]
@@ -56,10 +64,12 @@ mod tests {
             headers,
             body: "{\"result\":\"ok\"}".to_string(),
             elapsed_ms: 42,
+            size_bytes: 15,
         };
 
         assert_eq!(payload.status, 200);
         assert_eq!(payload.elapsed_ms, 42);
+        assert_eq!(payload.size_bytes, 15);
         assert!(payload.body.contains("ok"));
     }
 }
