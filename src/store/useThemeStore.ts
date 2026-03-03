@@ -8,7 +8,7 @@ interface ThemeStore {
   applyTheme: () => void;
 }
 
-const STORAGE_KEY = "postman-lite-theme";
+const STORAGE_KEY = "endpt-theme";
 
 const getSystemTheme = (): "light" | "dark" => {
   if (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches) {

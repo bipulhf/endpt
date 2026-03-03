@@ -98,7 +98,7 @@ export const Sidebar = (): ReactElement => {
   return (
     <aside className="flex h-full w-full flex-col border-r border-border bg-card">
       <div className="border-b border-border p-4">
-        <h1 className="text-lg font-semibold text-foreground">postman-lite</h1>
+        <h1 className="text-lg font-semibold text-foreground">Endpt</h1>
         <div className="mt-3 flex gap-2">
           <Button
             variant="secondary"

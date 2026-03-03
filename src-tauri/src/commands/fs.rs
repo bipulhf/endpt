@@ -29,7 +29,7 @@ mod tests {
 
     #[test]
     fn export_then_import_roundtrip() {
-        let path = temp_path("postman_lite_test_workspace.json");
+        let path = temp_path("endpt_test_workspace.json");
         let original = json!({
             "version": 1,
             "folders": [

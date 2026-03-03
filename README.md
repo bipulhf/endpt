@@ -1,6 +1,12 @@
-# Tauri + React + Typescript
+# Endpt
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Endpt is a desktop API client built with Tauri + React + TypeScript.
+
+## Maintainer
+
+- Name: Bipul Hf
+- Email: bipulhf@gmail.com
+- GitHub: https://github.com/bipulhf
 
 ## Recommended IDE Setup
 
