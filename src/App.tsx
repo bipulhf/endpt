@@ -20,14 +20,22 @@ function App() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
       <Toaster richColors position="bottom-right" />
-      <Group orientation="horizontal" className="h-full w-full">
-        <Panel defaultSize={24} minSize={16} maxSize={32}>
+      <Group
+        orientation="horizontal"
+        className="h-full w-full"
+        defaultLayout={{ sidebar: 22, main: 78 }}
+      >
+        <Panel id="sidebar" defaultSize={22} minSize={16} maxSize={40}>
           <Sidebar />
         </Panel>
-        <Separator className="w-1 bg-border/60 transition-colors hover:bg-primary/60" />
-        <Panel>
-          <Group orientation="vertical" className="h-full">
-            <Panel minSize={40}>
+        <Separator className="w-1.5 cursor-col-resize bg-border/60 transition-colors hover:bg-primary/60 active:bg-primary" />
+        <Panel id="main">
+          <Group
+            orientation="vertical"
+            className="h-full"
+            defaultLayout={{ editor: 60, response: 40 }}
+          >
+            <Panel id="editor" defaultSize={60} minSize={30}>
               <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
                 <div className="flex items-center justify-end border-b border-border px-4 py-2">
                   <ThemeToggle />
@@ -39,8 +47,8 @@ function App() {
                 />
               </div>
             </Panel>
-            <Separator className="h-1 bg-border/60 transition-colors hover:bg-primary/60" />
-            <Panel defaultSize={30} minSize={20}>
+            <Separator className="h-1.5 cursor-row-resize bg-border/60 transition-colors hover:bg-primary/60 active:bg-primary" />
+            <Panel id="response" defaultSize={40} minSize={20}>
               <ResponsePane response={response} isSending={isSending} />
             </Panel>
           </Group>
