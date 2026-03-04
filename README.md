@@ -14,9 +14,7 @@ Endpt is designed as a lightweight Postman/Insomnia alternative with a Rust-powe
 
 ## Screenshot
 
-Place your main app screenshot at `docs/screenshots/endpt-main.png`.
-
-Suggested size: around 1600x900 for clear GitHub preview.
+![Endpt Screenshot](app_ss.png)
 
 ## Core Features
 
