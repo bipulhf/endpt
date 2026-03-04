@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { CheckCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { Toaster } from "sonner";
 import { RequestEditor } from "./components/RequestEditor";
@@ -14,6 +15,9 @@ function App() {
   const [response, setResponse] = useState<HttpResponse | null>(null);
   const [isSending, setIsSending] = useState(false);
   const applyTheme = useThemeStore((state) => state.applyTheme);
+  const theme = useThemeStore((state) => state.theme);
+  const [saved, setSaved] = useState(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const workspace = useWorkspaceStore((state) => state.workspace);
   const loadWorkspaceFromData = useWorkspaceStore((state) => state.loadWorkspaceFromData);
   const activeRequestId = useWorkspaceStore((state) => state.activeRequestId);
@@ -54,7 +58,11 @@ function App() {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
-        void saveLocalData(workspace);
+        void saveLocalData(workspace).then(() => {
+          setSaved(true);
+          if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+          saveTimerRef.current = setTimeout(() => setSaved(false), 2000);
+        });
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -63,7 +71,7 @@ function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
-      <Toaster richColors position="bottom-right" />
+      <Toaster richColors theme={theme} position="bottom-right" />
       <Group orientation="horizontal" className="h-full w-full">
         <Panel id="sidebar" defaultSize="22%" minSize="15%" maxSize="35%">
           <Sidebar />
@@ -76,7 +84,14 @@ function App() {
           <Group orientation="vertical" className="h-full">
             <Panel id="editor" defaultSize="55%" minSize="25%">
               <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-                <div className="flex items-center justify-end border-b border-border px-4 py-2">
+                <div className="flex items-center justify-end gap-3 border-b border-border px-4 py-2">
+                  <span
+                    className={`flex items-center gap-1 text-xs text-green-500 transition-all duration-300 ${saved ? "opacity-100" : "opacity-0"
+                      }`}
+                  >
+                    <CheckCheck size={13} />
+                    Saved
+                  </span>
                   <ThemeToggle />
                 </div>
                 <RequestEditor

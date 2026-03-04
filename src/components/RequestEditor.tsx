@@ -2,7 +2,6 @@ import { Send } from "lucide-react";
 import { ReactElement, useMemo, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { open } from "@tauri-apps/plugin-dialog";
-import { toast } from "sonner";
 import { RequestTabs } from "./RequestTabs";
 import { AuthEditor } from "./AuthEditor";
 import { ParamsEditor } from "./ParamsEditor";
@@ -164,11 +163,9 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
       onResponse(response);
       updateRequest(activeRequest.id, { lastResponse: response });
       void saveLocalData(useWorkspaceStore.getState().workspace);
-      toast.success(`Response ${response.status}`);
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : "Request failed";
       setError(message);
-      toast.error(message);
     } finally {
       setIsSending(false);
     }
