@@ -1,8 +1,8 @@
-import { Download, FolderPlus, ChevronDown, ChevronRight, FilePlus, Trash2, Pencil, Upload } from "lucide-react";
+import { Download, FolderPlus, ChevronDown, ChevronRight, FilePlus, Save, Trash2, Pencil, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { exportData, importData } from "../services/ipc";
+import { exportData, importData, saveLocalData } from "../services/ipc";
 import { useWorkspaceStore } from "../store/useWorkspaceStore";
 import { HttpMethod } from "../types";
 import { ReactElement, useState } from "react";
@@ -38,6 +38,16 @@ export const Sidebar = (): ReactElement => {
     }
     createFolder(newFolderName);
     setNewFolderName("");
+  };
+
+  const handleSave = async (): Promise<void> => {
+    try {
+      await saveLocalData(workspace);
+      toast.success("Workspace saved");
+    } catch (saveError) {
+      const message = saveError instanceof Error ? saveError.message : "Save failed";
+      toast.error(message);
+    }
   };
 
   const handleExport = async (): Promise<void> => {
@@ -93,17 +103,24 @@ export const Sidebar = (): ReactElement => {
 
       return { folder, requests };
     })
-    .filter(({ requests }) => requests.length > 0);
+    .filter(({ folder, requests }) => !normalizedSearch || requests.length > 0 || folder.name.toLowerCase().includes(normalizedSearch));
 
   return (
     <aside className="flex h-full w-full flex-col border-r border-border bg-card">
       <div className="border-b border-border p-4">
         <h1 className="text-lg font-semibold text-foreground">Endpt</h1>
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            onClick={() => { void handleSave(); }}
+          >
+            <Save size={14} />
+            Save
+          </Button>
           <Button
             variant="secondary"
             size="sm"
-            onClick={handleImport}
+            onClick={() => { void handleImport(); }}
           >
             <Upload size={14} />
             Import
@@ -111,7 +128,7 @@ export const Sidebar = (): ReactElement => {
           <Button
             variant="secondary"
             size="sm"
-            onClick={handleExport}
+            onClick={() => { void handleExport(); }}
           >
             <Download size={14} />
             Export

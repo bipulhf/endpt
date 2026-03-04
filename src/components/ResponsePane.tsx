@@ -1,7 +1,8 @@
-import { Copy } from "lucide-react";
+import { Copy, Loader2, Send } from "lucide-react";
 import { ReactElement, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "./ui/badge";
+import { JsonTree } from "./JsonTree";
 import { formatBytes, getStatusText } from "../lib/utils";
 import { HttpResponse } from "../types";
 
@@ -11,16 +12,19 @@ interface ResponsePaneProps {
 }
 
 const statusClass = (status: number): "success" | "info" | "warning" | "danger" => {
-  if (status >= 200 && status < 300) {
-    return "success";
-  }
-  if (status >= 300 && status < 400) {
-    return "info";
-  }
-  if (status >= 400 && status < 500) {
-    return "warning";
-  }
+  if (status >= 200 && status < 300) return "success";
+  if (status >= 300 && status < 400) return "info";
+  if (status >= 400 && status < 500) return "warning";
   return "danger";
+};
+
+const isJson = (body: string): boolean => {
+  try {
+    JSON.parse(body);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 export const ResponsePane = ({ response, isSending }: ResponsePaneProps): ReactElement => {
@@ -28,10 +32,7 @@ export const ResponsePane = ({ response, isSending }: ResponsePaneProps): ReactE
   const [bodyView, setBodyView] = useState<"pretty" | "raw">("pretty");
 
   const formattedBody = useMemo(() => {
-    if (!response) {
-      return "";
-    }
-
+    if (!response) return "";
     try {
       const parsed = JSON.parse(response.body) as object | string | number | boolean | null;
       return JSON.stringify(parsed, null, 2);
@@ -40,17 +41,27 @@ export const ResponsePane = ({ response, isSending }: ResponsePaneProps): ReactE
     }
   }, [response]);
 
-  const displayBody = bodyView === "raw" ? response?.body ?? "" : formattedBody;
+  const headerEntries = useMemo(() => {
+    if (!response) return [];
+    return Object.entries(response.headers).sort(([a], [b]) => a.localeCompare(b));
+  }, [response]);
 
   const copyBody = async (): Promise<void> => {
-    if (!response?.body) {
-      return;
-    }
+    if (!response?.body) return;
     try {
       await navigator.clipboard.writeText(response.body);
       toast.success("Response body copied");
     } catch {
       toast.error("Failed to copy response body");
+    }
+  };
+
+  const copyHeaderValue = async (value: string): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success("Copied");
+    } catch {
+      toast.error("Failed to copy");
     }
   };
 
@@ -62,47 +73,61 @@ export const ResponsePane = ({ response, isSending }: ResponsePaneProps): ReactE
             <Badge variant={statusClass(response.status)}>
               {response.status} {getStatusText(response.status)}
             </Badge>
-            <Badge variant="muted">
-              {response.elapsed_ms} ms
-            </Badge>
-            <Badge variant="muted">
-              {formatBytes(response.size_bytes)}
-            </Badge>
+            <Badge variant="muted">{response.elapsed_ms} ms</Badge>
+            <Badge variant="muted">{formatBytes(response.size_bytes)}</Badge>
           </>
         )}
+
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
             onClick={() => setActiveTab("body")}
-            className={`text-xs ${activeTab === "body" ? "text-primary" : "text-muted-foreground"}`}
+            className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+              activeTab === "body"
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
           >
             Body
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("headers")}
-            className={`text-xs ${activeTab === "headers" ? "text-primary" : "text-muted-foreground"}`}
+            className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+              activeTab === "headers"
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
           >
             Headers
+            {response && (
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                {headerEntries.length}
+              </span>
+            )}
           </button>
 
           {activeTab === "body" && response && (
             <>
+              <div className="mx-1 h-4 w-px bg-border" />
               <button
                 type="button"
-                onClick={() => setBodyView((current) => (current === "pretty" ? "raw" : "pretty"))}
-                className="rounded border border-border bg-background px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setBodyView((c) => (c === "pretty" ? "raw" : "pretty"))}
+                className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                  bodyView === "pretty"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
               >
                 {bodyView === "pretty" ? "Pretty" : "Raw"}
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  void copyBody();
-                }}
-                className="rounded border border-border bg-background px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => { void copyBody(); }}
+                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                title="Copy response"
               >
-                <Copy size={12} />
+                <Copy size={13} />
               </button>
             </>
           )}
@@ -110,18 +135,67 @@ export const ResponsePane = ({ response, isSending }: ResponsePaneProps): ReactE
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto p-3">
-        {isSending && <p className="text-sm text-muted-foreground">Sending...</p>}
+        {isSending && (
+          <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
+            <Loader2 size={24} className="animate-spin" />
+            <span className="text-sm">Sending request...</span>
+          </div>
+        )}
 
-        {!isSending && !response && <p className="text-sm text-muted-foreground">Hit Send to see a response.</p>}
+        {!isSending && !response && (
+          <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
+            <Send size={24} />
+            <span className="text-sm">Hit Send to see a response</span>
+          </div>
+        )}
 
         {!isSending && response && activeTab === "body" && (
-          <pre className="whitespace-pre-wrap break-words text-xs text-foreground">{displayBody}</pre>
+          <>
+            {bodyView === "pretty" && isJson(response.body) ? (
+              <JsonTree data={response.body} />
+            ) : (
+              <pre className="whitespace-pre-wrap break-words text-xs text-foreground">
+                {bodyView === "raw" ? response.body : formattedBody}
+              </pre>
+            )}
+          </>
         )}
 
         {!isSending && response && activeTab === "headers" && (
-          <pre className="whitespace-pre-wrap break-words text-xs text-foreground">
-            {JSON.stringify(response.headers, null, 2)}
-          </pre>
+          <div className="overflow-hidden rounded-md border border-border">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Name</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Value</th>
+                  <th className="w-10 px-2 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {headerEntries.map(([name, value]) => (
+                  <tr
+                    key={name}
+                    className="border-b border-border last:border-0 hover:bg-muted/30"
+                  >
+                    <td className="px-3 py-2 font-medium text-foreground">{name}</td>
+                    <td className="max-w-[300px] truncate px-3 py-2 text-muted-foreground" title={value}>
+                      {value}
+                    </td>
+                    <td className="px-2 py-2">
+                      <button
+                        type="button"
+                        onClick={() => { void copyHeaderValue(value); }}
+                        className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        title="Copy value"
+                      >
+                        <Copy size={11} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </section>

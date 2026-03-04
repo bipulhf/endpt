@@ -1,5 +1,46 @@
 use serde_json::Value;
 use std::fs;
+use tauri::Manager;
+
+/// Save workspace to the app's local data directory (no file picker).
+#[tauri::command]
+pub fn save_local_workspace(app: tauri::AppHandle, data: Value) -> Result<(), String> {
+    let data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("failed to resolve app data dir: {e}"))?;
+
+    std::fs::create_dir_all(&data_dir)
+        .map_err(|e| format!("failed to create app data dir: {e}"))?;
+
+    let path = data_dir.join("workspace.json");
+    let json =
+        serde_json::to_string_pretty(&data).map_err(|e| format!("serialization error: {e}"))?;
+
+    std::fs::write(&path, json).map_err(|e| format!("file write error: {e}"))
+}
+
+/// Load workspace from the app's local data directory.  Returns `null` if no
+/// saved workspace exists yet (first launch).
+#[tauri::command]
+pub fn load_local_workspace(app: tauri::AppHandle) -> Result<Option<Value>, String> {
+    let data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("failed to resolve app data dir: {e}"))?;
+
+    let path = data_dir.join("workspace.json");
+
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let contents = std::fs::read_to_string(&path).map_err(|e| format!("file read error: {e}"))?;
+
+    serde_json::from_str(&contents)
+        .map(Some)
+        .map_err(|e| format!("json parse error: {e}"))
+}
 
 #[tauri::command]
 pub fn export_workspace(path: String, data: Value) -> Result<(), String> {

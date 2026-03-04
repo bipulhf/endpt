@@ -17,6 +17,7 @@ export type BodyType =
   | "graphql";
 
 export type RawLanguage = "text" | "json" | "xml" | "html" | "javascript";
+export type AuthType = "none" | "bearer" | "basic" | "api-key";
 
 export interface HeaderRow {
   id: string;
@@ -38,6 +39,19 @@ export interface GraphQLBody {
   variables: string;
 }
 
+export interface QueryParam {
+  id: string;
+  key: string;
+  value: string;
+  enabled: boolean;
+}
+
+export interface AuthConfig {
+  type: AuthType;
+  bearer: { token: string };
+  basic: { username: string; password: string };
+  apiKey: { key: string; value: string; addTo: "header" | "query" };
+}
 export interface RequestBody {
   type: BodyType;
   raw: string;
@@ -55,6 +69,9 @@ export interface ApiRequest {
   url: string;
   headers: HeaderRow[];
   body: RequestBody;
+  queryParams: QueryParam[];
+  auth: AuthConfig;
+  lastResponse?: HttpResponse | null;
 }
 
 export interface Folder {

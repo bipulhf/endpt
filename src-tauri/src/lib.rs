@@ -1,7 +1,9 @@
 mod commands;
 mod models;
 
-use commands::fs::{export_workspace, import_workspace};
+use commands::fs::{
+    export_workspace, import_workspace, load_local_workspace, save_local_workspace,
+};
 use commands::network::{make_binary_request, make_http_request, make_multipart_request};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -14,7 +16,9 @@ pub fn run() {
             make_multipart_request,
             make_binary_request,
             export_workspace,
-            import_workspace
+            import_workspace,
+            save_local_workspace,
+            load_local_workspace
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

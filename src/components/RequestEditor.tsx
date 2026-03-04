@@ -1,11 +1,14 @@
 import { Send } from "lucide-react";
 import { ReactElement, useMemo, useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { open } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
 import { RequestTabs } from "./RequestTabs";
-import { executeHttpRequest } from "../services/ipc";
+import { AuthEditor } from "./AuthEditor";
+import { ParamsEditor } from "./ParamsEditor";
+import { executeHttpRequest, saveLocalData } from "../services/ipc";
 import { useWorkspaceStore } from "../store/useWorkspaceStore";
-import { BodyType, FormDataRow, HeaderRow, HttpMethod, HttpResponse, RawLanguage, RequestBody } from "../types";
+import { AuthConfig, BodyType, FormDataRow, HeaderRow, HttpMethod, HttpResponse, QueryParam, RawLanguage, RequestBody } from "../types";
 
 interface RequestEditorProps {
   onResponse: (response: HttpResponse) => void;
@@ -14,6 +17,16 @@ interface RequestEditorProps {
 }
 
 const methods: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
+
+const methodColors: Record<HttpMethod, string> = {
+  GET: "text-green-400",
+  POST: "text-blue-400",
+  PUT: "text-amber-400",
+  PATCH: "text-purple-400",
+  DELETE: "text-red-400",
+  HEAD: "text-muted-foreground",
+  OPTIONS: "text-muted-foreground",
+};
 
 const createHeader = (): HeaderRow => ({
   id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2),
@@ -40,8 +53,10 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
   const updateRequest = useWorkspaceStore((state) => state.updateRequest);
   const setActiveRequest = useWorkspaceStore((state) => state.setActiveRequest);
   const closeRequestTab = useWorkspaceStore((state) => state.closeRequestTab);
-  const [activeTab, setActiveTab] = useState<"headers" | "body">("headers");
+  const [activeTab, setActiveTab] = useState<EditorTab>("params");
   const [error, setError] = useState("");
+
+  type EditorTab = "params" | "headers" | "auth" | "body";
 
   const requestMap = useMemo(() => {
     const entries = workspace.folders.flatMap((folder) => folder.requests.map((request) => [request.id, request] as const));
@@ -106,7 +121,6 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
     if (!activeRequest) {
       return;
     }
-
     updateBody({
       ...activeRequest.body,
       [mode]: updater(activeRequest.body[mode]),
@@ -117,7 +131,6 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
     if (!activeRequest) {
       return;
     }
-
     const selected = await open({ multiple: false });
     if (!selected || Array.isArray(selected)) {
       return;
@@ -149,6 +162,8 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
     try {
       const response = await executeHttpRequest(activeRequest);
       onResponse(response);
+      updateRequest(activeRequest.id, { lastResponse: response });
+      void saveLocalData(useWorkspaceStore.getState().workspace);
       toast.success(`Response ${response.status}`);
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : "Request failed";
@@ -157,6 +172,20 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
     } finally {
       setIsSending(false);
     }
+  };
+
+  const updateAuth = (auth: AuthConfig): void => {
+    if (!activeRequest) {
+      return;
+    }
+    updateRequest(activeRequest.id, { auth });
+  };
+
+  const updateQueryParams = (queryParams: QueryParam[]): void => {
+    if (!activeRequest) {
+      return;
+    }
+    updateRequest(activeRequest.id, { queryParams });
   };
 
   if (!activeRequest) {
@@ -181,23 +210,34 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
       />
 
       <div className="mb-3 flex items-center gap-2">
-        <select
+        <Select
+          key={activeRequest.id}
           value={activeRequest.method}
-          onChange={(event) => updateRequest(activeRequest.id, { method: event.target.value as HttpMethod })}
-          className="rounded border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
+          onValueChange={(value) => updateRequest(activeRequest.id, { method: value as HttpMethod })}
         >
-          {methods.map((method) => (
-            <option key={method} value={method}>
-              {method}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className={`w-[120px] shrink-0 font-semibold ${methodColors[activeRequest.method]}`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {methods.map((method) => (
+              <SelectItem key={method} value={method} className={methodColors[method]}>
+                {method}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <input
           value={activeRequest.url}
           onChange={(event) => updateRequest(activeRequest.id, { url: event.target.value })}
           placeholder="https://api.example.com"
           className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void handleSend();
+            }
+          }}
         />
 
         <button
@@ -220,22 +260,47 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
         className="mb-3 rounded border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
       />
 
-      <div className="mb-2 flex border-b border-border">
-        <button
-          type="button"
-          onClick={() => setActiveTab("headers")}
-          className={`px-3 py-2 text-sm ${activeTab === "headers" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
-        >
-          Headers
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("body")}
-          className={`px-3 py-2 text-sm ${activeTab === "body" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
-        >
-          Body
-        </button>
-      </div>
+      {
+        (() => {
+          const paramCount = (activeRequest.queryParams ?? []).filter((p) => p.enabled && p.key.trim()).length;
+          const headerCount = activeRequest.headers.filter((h) => h.enabled && h.key.trim()).length;
+          return (
+            <div className="mb-2 flex border-b border-border">
+              {(
+                [
+                  { key: "params" as const, label: "Params", count: paramCount },
+                  { key: "headers" as const, label: "Headers", count: headerCount },
+                  { key: "auth" as const, label: "Auth" },
+                  { key: "body" as const, label: "Body" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`relative inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${activeTab === tab.key
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  {tab.label}
+                  {"count" in tab && tab.count > 0 && (
+                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          );
+        })()
+      }
+      {activeTab === "params" && (
+        <ParamsEditor
+          params={activeRequest.queryParams ?? []}
+          onChange={updateQueryParams}
+        />
+      )}
 
       {activeTab === "headers" && (
         <div className="min-h-0 flex-1 overflow-auto rounded border border-border bg-card p-3">
@@ -286,8 +351,12 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
         </div>
       )}
 
+      {activeTab === "auth" && (
+        <AuthEditor auth={activeRequest.auth} onChange={updateAuth} />
+      )}
+
       {activeTab === "body" && (
-        <div className="min-h-0 flex-1 overflow-auto rounded border border-gray-800 bg-gray-900 p-3">
+        <div className="min-h-0 flex-1 overflow-auto rounded border border-border bg-card p-3">
           <div className="mb-3 flex flex-wrap gap-2">
             {bodyTypes.map((type) => (
               <button
@@ -295,8 +364,8 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
                 type="button"
                 onClick={() => updateCurrentBodyType(type)}
                 className={`rounded px-2 py-1 text-xs capitalize ${activeRequest.body.type === type
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   }`}
               >
                 {type}
@@ -307,20 +376,24 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
           {(activeRequest.body.type === "json" || activeRequest.body.type === "raw") && (
             <>
               {activeRequest.body.type === "raw" && (
-                <select
+                <Select
                   value={activeRequest.body.rawLanguage}
-                  onChange={(event) => updateBody({
+                  onValueChange={(value) => updateBody({
                     ...activeRequest.body,
-                    rawLanguage: event.target.value as RawLanguage,
+                    rawLanguage: value as RawLanguage,
                   })}
-                  className="mb-2 rounded border border-gray-700 bg-gray-950 px-2 py-1 text-xs text-gray-100 outline-none focus:border-indigo-500"
                 >
-                  {rawLanguages.map((language) => (
-                    <option key={language} value={language}>
-                      {language}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="mb-2 w-[120px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rawLanguages.map((language) => (
+                      <SelectItem key={language} value={language} className="text-xs capitalize">
+                        {language}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
               <textarea
                 value={activeRequest.body.raw}
@@ -329,18 +402,18 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
                   raw: event.target.value,
                 })}
                 placeholder={activeRequest.body.type === "json" ? '{\n  "key": "value"\n}' : "Enter request body"}
-                className="mono min-h-[260px] w-full resize-y rounded border border-gray-800 bg-gray-950 p-3 text-sm text-gray-100 outline-none focus:border-indigo-500"
+                className="min-h-[260px] w-full resize-y rounded border border-input bg-background p-3 font-mono text-sm text-foreground outline-none focus:border-primary"
               />
             </>
           )}
 
           {activeRequest.body.type === "none" && (
-            <p className="py-6 text-sm text-gray-400">This request does not have a body.</p>
+            <p className="py-6 text-sm text-muted-foreground">This request does not have a body.</p>
           )}
 
           {(activeRequest.body.type === "form-data" || activeRequest.body.type === "x-www-form-urlencoded") && (
             <div className="space-y-2">
-              <div className={`grid gap-2 text-xs uppercase text-gray-400 ${activeRequest.body.type === "form-data" ? "grid-cols-[40px_1fr_1fr_120px_40px]" : "grid-cols-[40px_1fr_1fr_40px]"}`}>
+              <div className={`grid gap-2 text-xs uppercase text-muted-foreground ${activeRequest.body.type === "form-data" ? "grid-cols-[40px_1fr_1fr_120px_40px]" : "grid-cols-[40px_1fr_1fr_40px]"}`}>
                 <span>On</span>
                 <span>Key</span>
                 <span>Value</span>
@@ -372,7 +445,7 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
                         current.id === row.id ? { ...current, key: event.target.value } : current,
                       ),
                     )}
-                    className="rounded border border-gray-700 bg-gray-950 px-2 py-2 text-sm text-gray-100 outline-none focus:border-indigo-500"
+                    className="rounded border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
                   />
                   <input
                     value={row.value}
@@ -382,21 +455,25 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
                         current.id === row.id ? { ...current, value: event.target.value } : current,
                       ),
                     )}
-                    className="rounded border border-gray-700 bg-gray-950 px-2 py-2 text-sm text-gray-100 outline-none focus:border-indigo-500"
+                    className="rounded border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
                   />
                   {activeRequest.body.type === "form-data" ? (
-                    <select
+                    <Select
                       value={row.type}
-                      onChange={(event) => updateFormRows("formData", (rows) =>
+                      onValueChange={(value) => updateFormRows("formData", (rows) =>
                         rows.map((current) =>
-                          current.id === row.id ? { ...current, type: event.target.value as "text" | "file" } : current,
+                          current.id === row.id ? { ...current, type: value as "text" | "file" } : current,
                         ),
                       )}
-                      className="rounded border border-gray-700 bg-gray-950 px-2 py-2 text-sm text-gray-100 outline-none focus:border-indigo-500"
                     >
-                      <option value="text">text</option>
-                      <option value="file">file</option>
-                    </select>
+                      <SelectTrigger className="text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text" className="text-xs">text</SelectItem>
+                        <SelectItem value="file" className="text-xs">file</SelectItem>
+                      </SelectContent>
+                    </Select>
                   ) : null}
                   <button
                     type="button"
@@ -404,7 +481,7 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
                       activeRequest.body.type === "form-data" ? "formData" : "urlEncoded",
                       (rows) => rows.filter((current) => current.id !== row.id),
                     )}
-                    className="rounded border border-gray-700 bg-gray-950 px-2 py-2 text-xs text-gray-300 hover:bg-gray-800"
+                    className="rounded border border-input bg-background px-2 py-2 text-xs text-muted-foreground hover:bg-muted"
                   >
                     X
                   </button>
@@ -414,7 +491,7 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
               <button
                 type="button"
                 onClick={() => updateFormRows(activeRequest.body.type === "form-data" ? "formData" : "urlEncoded", (rows) => [...rows, createFormRow()])}
-                className="rounded border border-gray-700 bg-gray-950 px-3 py-2 text-xs text-gray-200 hover:bg-gray-800"
+                className="rounded border border-input bg-background px-3 py-2 text-xs text-foreground hover:bg-muted"
               >
                 + Add Row
               </button>
@@ -428,17 +505,17 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
                 onClick={() => {
                   void selectBinaryFile();
                 }}
-                className="rounded border border-gray-700 bg-gray-950 px-3 py-2 text-xs text-gray-200 hover:bg-gray-800"
+                className="rounded border border-input bg-background px-3 py-2 text-xs text-foreground hover:bg-muted"
               >
                 Select File
               </button>
-              <p className="text-xs text-gray-400">{activeRequest.body.binaryFilePath ?? "No file selected"}</p>
+              <p className="text-xs text-muted-foreground">{activeRequest.body.binaryFilePath ?? "No file selected"}</p>
             </div>
           )}
 
           {activeRequest.body.type === "graphql" && (
             <div className="space-y-2">
-              <label className="text-xs uppercase text-gray-400">Query</label>
+              <label className="text-xs uppercase text-muted-foreground">Query</label>
               <textarea
                 value={activeRequest.body.graphql.query}
                 onChange={(event) => updateBody({
@@ -448,9 +525,9 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
                     query: event.target.value,
                   },
                 })}
-                className="mono min-h-[160px] w-full resize-y rounded border border-gray-800 bg-gray-950 p-3 text-sm text-gray-100 outline-none focus:border-indigo-500"
+                className="min-h-[160px] w-full resize-y rounded border border-input bg-background p-3 font-mono text-sm text-foreground outline-none focus:border-primary"
               />
-              <label className="text-xs uppercase text-gray-400">Variables (JSON)</label>
+              <label className="text-xs uppercase text-muted-foreground">Variables (JSON)</label>
               <textarea
                 value={activeRequest.body.graphql.variables}
                 onChange={(event) => updateBody({
@@ -460,14 +537,14 @@ export const RequestEditor = ({ onResponse, isSending, setIsSending }: RequestEd
                     variables: event.target.value,
                   },
                 })}
-                className="mono min-h-[120px] w-full resize-y rounded border border-gray-800 bg-gray-950 p-3 text-sm text-gray-100 outline-none focus:border-indigo-500"
+                className="min-h-[120px] w-full resize-y rounded border border-input bg-background p-3 font-mono text-sm text-foreground outline-none focus:border-primary"
               />
             </div>
           )}
         </div>
       )}
 
-      {error && <div className="mt-2 text-sm text-red-300">{error}</div>}
+      {error && <div className="mt-2 text-sm text-red-500">{error}</div>}
     </section>
   );
 };

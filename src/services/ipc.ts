@@ -43,6 +43,28 @@ const buildHeaders = (request: ApiRequest): Record<string, string> => {
     }
   }
 
+  if (request.auth) {
+    switch (request.auth.type) {
+      case "bearer":
+        if (request.auth.bearer.token.trim()) {
+          headers["Authorization"] = `Bearer ${request.auth.bearer.token.trim()}`;
+        }
+        break;
+      case "basic": {
+        const { username, password } = request.auth.basic;
+        if (username.trim()) {
+          headers["Authorization"] = `Basic ${btoa(`${username}:${password}`)}`;
+        }
+        break;
+      }
+      case "api-key":
+        if (request.auth.apiKey.addTo === "header" && request.auth.apiKey.key.trim()) {
+          headers[request.auth.apiKey.key.trim()] = request.auth.apiKey.value;
+        }
+        break;
+    }
+  }
+
   const contentType = autoContentType(request);
   if (contentType && !headers["Content-Type"] && !headers["content-type"]) {
     headers["Content-Type"] = contentType;
@@ -51,8 +73,43 @@ const buildHeaders = (request: ApiRequest): Record<string, string> => {
   return headers;
 };
 
+const buildUrl = (request: ApiRequest): string => {
+  let url = request.url;
+
+  const enabledParams = (request.queryParams ?? []).filter(
+    (p) => p.enabled && p.key.trim().length > 0,
+  );
+
+  if (request.auth?.type === "api-key" && request.auth.apiKey.addTo === "query" && request.auth.apiKey.key.trim()) {
+    enabledParams.push({
+      id: "__auth__",
+      key: request.auth.apiKey.key.trim(),
+      value: request.auth.apiKey.value,
+      enabled: true,
+    });
+  }
+
+  if (enabledParams.length > 0) {
+    try {
+      const urlObj = new URL(url);
+      for (const param of enabledParams) {
+        urlObj.searchParams.set(param.key.trim(), param.value);
+      }
+      url = urlObj.toString();
+    } catch {
+      const qs = enabledParams
+        .map((p) => `${encodeURIComponent(p.key.trim())}=${encodeURIComponent(p.value)}`)
+        .join("&");
+      url += (url.includes("?") ? "&" : "?") + qs;
+    }
+  }
+
+  return url;
+};
+
 export const executeHttpRequest = async (request: ApiRequest): Promise<HttpResponse> => {
   const headers = buildHeaders(request);
+  const url = buildUrl(request);
 
   if (request.body.type === "form-data") {
     const parts = request.body.formData
@@ -65,7 +122,7 @@ export const executeHttpRequest = async (request: ApiRequest): Promise<HttpRespo
 
     return invoke<HttpResponse>("make_multipart_request", {
       method: request.method,
-      url: request.url,
+      url,
       headers,
       parts,
     });
@@ -78,7 +135,7 @@ export const executeHttpRequest = async (request: ApiRequest): Promise<HttpRespo
 
     return invoke<HttpResponse>("make_binary_request", {
       method: request.method,
-      url: request.url,
+      url,
       headers,
       file_path: request.body.binaryFilePath,
       filePath: request.body.binaryFilePath,
@@ -94,7 +151,7 @@ export const executeHttpRequest = async (request: ApiRequest): Promise<HttpRespo
     return invoke<HttpResponse>("make_http_request", {
       payload: {
         method: request.method,
-        url: request.url,
+        url,
         headers,
         body: encoded || null,
       },
@@ -110,7 +167,7 @@ export const executeHttpRequest = async (request: ApiRequest): Promise<HttpRespo
     return invoke<HttpResponse>("make_http_request", {
       payload: {
         method: request.method,
-        url: request.url,
+        url,
         headers,
         body: JSON.stringify({
           query: request.body.graphql.query,
@@ -125,11 +182,21 @@ export const executeHttpRequest = async (request: ApiRequest): Promise<HttpRespo
   return invoke<HttpResponse>("make_http_request", {
     payload: {
       method: request.method,
-      url: request.url,
+      url,
       headers,
       body,
     },
   });
+};
+
+export const saveLocalData = async (workspace: Workspace): Promise<void> => {
+  await invoke("save_local_workspace", { data: workspace });
+};
+
+export const loadLocalData = async (): Promise<Workspace | null> => {
+  const data = await invoke<Workspace | null>("load_local_workspace");
+  if (!data || !isWorkspace(data)) return null;
+  return data;
 };
 
 export const exportData = async (workspace: Workspace): Promise<void> => {

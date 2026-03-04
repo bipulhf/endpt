@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { ApiRequest, HeaderRow, RequestBody, Workspace } from "../types";
+import { saveLocalData } from "../services/ipc";
+import { ApiRequest, AuthConfig, HeaderRow, RequestBody, Workspace } from "../types";
 
 interface WorkspaceState {
   workspace: Workspace;
@@ -32,6 +33,13 @@ const createDefaultHeader = (): HeaderRow => ({
   enabled: true,
 });
 
+const createDefaultAuth = (): AuthConfig => ({
+  type: "none",
+  bearer: { token: "" },
+  basic: { username: "", password: "" },
+  apiKey: { key: "", value: "", addTo: "header" },
+});
+
 const createDefaultBody = (): RequestBody => ({
   type: "none",
   raw: "",
@@ -44,6 +52,20 @@ const createDefaultBody = (): RequestBody => ({
     variables: "",
   },
 });
+
+const normalizeAuth = (auth: unknown): AuthConfig => {
+  if (!auth || typeof auth !== "object") {
+    return createDefaultAuth();
+  }
+  const partial = auth as Partial<AuthConfig>;
+  return {
+    ...createDefaultAuth(),
+    ...partial,
+    bearer: { ...createDefaultAuth().bearer, ...(partial.bearer ?? {}) },
+    basic: { ...createDefaultAuth().basic, ...(partial.basic ?? {}) },
+    apiKey: { ...createDefaultAuth().apiKey, ...(partial.apiKey ?? {}) },
+  };
+};
 
 const normalizeBody = (body: unknown): RequestBody => {
   if (typeof body === "string") {
@@ -78,7 +100,10 @@ const normalizeWorkspace = (data: Workspace): Workspace => ({
     ...folder,
     requests: folder.requests.map((request) => ({
       ...request,
+      queryParams: Array.isArray(request.queryParams) ? request.queryParams : [],
+      auth: normalizeAuth(request.auth),
       body: normalizeBody(request.body),
+      lastResponse: request.lastResponse ?? null,
     })),
   })),
 });
@@ -89,7 +114,10 @@ const createDefaultRequest = (name: string): ApiRequest => ({
   method: "GET",
   url: "",
   headers: [createDefaultHeader()],
+  queryParams: [],
+  auth: createDefaultAuth(),
   body: createDefaultBody(),
+  lastResponse: null,
 });
 
 const defaultWorkspace: Workspace = {
@@ -186,6 +214,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         ? state.openRequestIds
         : [...state.openRequestIds, request.id],
     }));
+
+    void saveLocalData(get().workspace);
   },
 
   deleteRequest: (folderId, requestId) => {
