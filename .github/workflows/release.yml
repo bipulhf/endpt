@@ -41,6 +41,20 @@ jobs:
             librsvg2-dev \
             patchelf
 
+      - name: Sync version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Syncing version to $VERSION"
+          npm version "$VERSION" --no-git-tag-version
+          node -e "
+            const fs = require('fs');
+            const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+            conf.version = '$VERSION';
+            fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2));
+            const cargo = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
+            fs.writeFileSync('src-tauri/Cargo.toml', cargo.replace(/^version = \".*\"/m, 'version = \"$VERSION\"'));
+          "
+
       - name: Install dependencies
         run: npm ci
 
@@ -62,9 +76,9 @@ jobs:
       matrix:
         include:
           - platform: "ubuntu-22.04"
-            args: "--bundles deb"
+            args: "--bundles deb,appimage"
           - platform: "windows-latest"
-            args: "--bundles msi"
+            args: "--bundles nsis"
           - platform: "macos-latest"
             args: "--bundles dmg"
 
@@ -99,6 +113,21 @@ jobs:
             librsvg2-dev \
             patchelf
 
+      - name: Sync version from tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Syncing version to $VERSION"
+          npm version "$VERSION" --no-git-tag-version
+          node -e "
+            const fs = require('fs');
+            const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+            conf.version = process.argv[1];
+            fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2));
+            const cargo = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
+            fs.writeFileSync('src-tauri/Cargo.toml', cargo.replace(/^version = \".*\"/m, 'version = \"' + process.argv[1] + '\"'));
+          " "$VERSION"
+
       - name: Install dependencies
         run: npm ci
 
@@ -106,6 +135,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Endpt ${{ github.ref_name }}"

@@ -6,6 +6,7 @@ import { RequestEditor } from "./components/RequestEditor";
 import { ResponsePane } from "./components/ResponsePane";
 import { Sidebar } from "./components/Sidebar";
 import { ThemeToggle } from "./components/ThemeToggle";
+import { UpdateChecker } from "./components/UpdateChecker";
 import { loadLocalData, saveLocalData } from "./services/ipc";
 import { useThemeStore } from "./store/useThemeStore";
 import { useWorkspaceStore } from "./store/useWorkspaceStore";
@@ -92,6 +93,7 @@ function App() {
                     <CheckCheck size={13} />
                     Saved
                   </span>
+                  <UpdateChecker />
                   <ThemeToggle />
                 </div>
                 <RequestEditor

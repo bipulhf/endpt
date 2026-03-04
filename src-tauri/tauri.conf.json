@@ -32,6 +32,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": "v1Compatible"
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/bipulhf/endpt/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDA4QjQ3OUUwNUNBODJENDkKUldSSkxhaGM0SG0wQ0pWbmxJTjZNTmRJSkU2ZW9xeHRBb2h1WUJlcUZMbGVmYUY2ditVUlhwU2QK"
+    }
   }
 }
