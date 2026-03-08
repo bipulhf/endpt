@@ -13,7 +13,7 @@ export const ThemeToggle = (): ReactElement => {
   const setTheme = useThemeStore((state) => state.setTheme);
 
   return (
-    <div className="flex items-center gap-1 rounded-md border border-border bg-card p-1">
+    <div className="panel-subtle flex items-center gap-1 rounded-xl p-0.5">
       {options.map(({ value, label, icon: Icon }) => (
         <button
           key={value}
@@ -21,10 +21,11 @@ export const ThemeToggle = (): ReactElement => {
           title={label}
           aria-label={label}
           onClick={() => setTheme(value)}
-          className={`rounded-sm p-1.5 transition-colors ${theme === value
-            ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
+          className={`rounded-lg p-1.5 transition-all duration-200 ${
+            theme === value
+              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+              : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+          }`}
         >
           <Icon size={14} />
         </button>

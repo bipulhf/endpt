@@ -93,7 +93,7 @@ export const UpdateChecker = (): ReactElement => {
         variant="outline"
         size="sm"
         onClick={() => void downloadAndInstall()}
-        className="gap-1.5 border-green-600 text-green-500 hover:bg-green-900/30 hover:text-green-400"
+        className="gap-1.5 border-emerald-600/30 text-emerald-700 hover:bg-emerald-600/10 hover:text-emerald-800 dark:border-emerald-400/30 dark:text-emerald-400 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-200"
       >
         <Download size={13} />
         Update to {pendingUpdate.version}
@@ -116,7 +116,7 @@ export const UpdateChecker = (): ReactElement => {
         variant="outline"
         size="sm"
         onClick={() => void relaunch()}
-        className="gap-1.5 border-green-600 text-green-500 hover:bg-green-900/30 hover:text-green-400"
+        className="gap-1.5 border-emerald-600/30 text-emerald-700 hover:bg-emerald-600/10 hover:text-emerald-800 dark:border-emerald-400/30 dark:text-emerald-400 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-200"
       >
         <RefreshCw size={13} />
         Restart
@@ -138,7 +138,11 @@ export const UpdateChecker = (): ReactElement => {
       ) : (
         <RefreshCw size={13} />
       )}
-      {status === "checking" ? "Checking..." : status === "up-to-date" ? "Up to date" : "Updates"}
+      {status === "checking"
+        ? "Checking..."
+        : status === "up-to-date"
+          ? "Up to date"
+          : "Updates"}
     </Button>
   );
 };

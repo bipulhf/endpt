@@ -1,68 +1,196 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --background: 32 43% 97%;
+    --foreground: 218 31% 16%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --primary: 262 83% 58%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
+    --card-foreground: 218 31% 16%;
+    --primary: 20 92% 60%;
+    --primary-foreground: 24 70% 10%;
+    --secondary: 210 32% 94%;
+    --secondary-foreground: 217 30% 20%;
+    --muted: 210 28% 92%;
+    --muted-foreground: 218 15% 42%;
+    --accent: 192 49% 92%;
+    --accent-foreground: 199 62% 24%;
+    --destructive: 0 82% 58%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 262 83% 58%;
-    --radius: 0.5rem;
+    --border: 214 25% 86%;
+    --input: 214 25% 86%;
+    --ring: 20 92% 60%;
+    --radius: 0.95rem;
+    --shadow-color: 216 38% 24%;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --primary: 263 70% 50.4%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --background: 218 24% 14%;
+    --foreground: 210 28% 93%;
+    --card: 219 22% 18%;
+    --card-foreground: 210 28% 93%;
+    --primary: 20 96% 67%;
+    --primary-foreground: 22 75% 12%;
+    --secondary: 216 19% 23%;
+    --secondary-foreground: 210 22% 92%;
+    --muted: 217 16% 22%;
+    --muted-foreground: 215 15% 69%;
+    --accent: 193 33% 24%;
+    --accent-foreground: 188 65% 89%;
+    --destructive: 0 72% 58%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 263 70% 50.4%;
+    --border: 217 16% 28%;
+    --input: 217 16% 25%;
+    --ring: 20 96% 67%;
+    --shadow-color: 222 45% 4%;
   }
 
   * {
     @apply border-border;
   }
 
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: Inter, system-ui, sans-serif;
+    font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+    background-image:
+      radial-gradient(
+        circle at top left,
+        hsl(var(--primary) / 0.22),
+        transparent 22rem
+      ),
+      radial-gradient(
+        circle at 88% 12%,
+        hsl(193 80% 62% / 0.14),
+        transparent 18rem
+      ),
+      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+    background-attachment: fixed;
   }
 
   pre,
   code,
   textarea {
-    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-family: "IBM Plex Mono", "JetBrains Mono", monospace;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.08) 1px, transparent 1px);
+    background-size: 1.6rem 1.6rem;
+    mask-image: radial-gradient(circle at center, black 35%, transparent 92%);
+    opacity: 0.45;
+  }
+}
+
+@layer components {
+  .app-shell {
+    border: 1px solid hsl(var(--border) / 0.7);
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card) / 0.92),
+      hsl(var(--card) / 0.78)
+    );
+    box-shadow:
+      0 24px 60px -46px hsl(var(--shadow-color) / 0.95),
+      inset 0 1px 0 hsl(0 0% 100% / 0.05);
+    backdrop-filter: blur(28px);
+  }
+
+  .panel-surface {
+    border: 1px solid hsl(var(--border) / 0.78);
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card) / 0.92),
+      hsl(var(--card) / 0.78)
+    );
+    box-shadow:
+      0 18px 24px -26px hsl(var(--shadow-color) / 0.88),
+      inset 0 1px 0 hsl(0 0% 100% / 0.045);
+    backdrop-filter: blur(22px);
+  }
+
+  .panel-surface-strong {
+    border: 1px solid hsl(var(--border) / 0.82);
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card) / 0.98),
+      hsl(var(--card) / 0.86)
+    );
+    box-shadow:
+      0 22px 26px -30px hsl(var(--shadow-color) / 0.95),
+      inset 0 1px 0 hsl(0 0% 100% / 0.05);
+    backdrop-filter: blur(24px);
+  }
+
+  .panel-subtle {
+    border: 1px solid hsl(var(--border) / 0.68);
+    background: hsl(var(--background) / 0.52);
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.04);
+    backdrop-filter: blur(14px);
+  }
+
+  .control-field {
+    border: 1px solid hsl(var(--input) / 0.9);
+    background: linear-gradient(
+      180deg,
+      hsl(var(--background) / 0.86),
+      hsl(var(--background) / 0.7)
+    );
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.035),
+      0 12px 20px -18px hsl(var(--shadow-color) / 0.9);
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease,
+      background-color 180ms ease;
+  }
+
+  .control-field:hover {
+    border-color: hsl(var(--border));
+  }
+
+  .control-field:focus-visible {
+    border-color: hsl(var(--primary) / 0.88);
+    box-shadow:
+      0 0 0 4px hsl(var(--primary) / 0.16),
+      inset 0 1px 0 hsl(0 0% 100% / 0.05),
+      0 24px 44px -34px hsl(var(--primary) / 0.65);
+    outline: none;
+  }
+
+  .eyebrow {
+    @apply text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-muted-foreground;
+  }
+
+  .metric-card {
+    border: 1px solid hsl(var(--border) / 0.6);
+    background: linear-gradient(
+      180deg,
+      hsl(var(--background) / 0.72),
+      hsl(var(--background) / 0.56)
+    );
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.04);
   }
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 0.45rem;
+  height: 0.45rem;
 }
 
 ::-webkit-scrollbar-track {
@@ -70,9 +198,9 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply rounded bg-muted-foreground/20;
+  @apply rounded-full bg-muted-foreground/30;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-muted-foreground/40;
+  @apply bg-muted-foreground/50;
 }
