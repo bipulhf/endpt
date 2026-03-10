@@ -467,6 +467,12 @@ export const Sidebar = ({ onRequestSelected }: SidebarProps): ReactElement => {
           {error}
         </div>
       )}
+
+      <div className="border-t border-border/70 px-4 py-3">
+        <p className="text-[11px] leading-5 text-muted-foreground">
+          Made with Copilot ❤️
+        </p>
+      </div>
     </aside>
   );
 };
