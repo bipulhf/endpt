@@ -4,7 +4,7 @@
 [![Build](https://github.com/bipulhf/endpt/actions/workflows/release.yml/badge.svg)](https://github.com/bipulhf/endpt/actions/workflows/release.yml)
 [![License](https://img.shields.io/github/license/bipulhf/endpt)](LICENSE)
 
-![Endpt Logo](main_logo.png)
+![Endpt Logo](main_logo.png){width=100 height=100}
 
 Endpt is a high-performance desktop API client built with Tauri v2, React, TypeScript, and Rust.
 
@@ -22,19 +22,19 @@ Endpt is designed as a lightweight Postman/Insomnia alternative with a Rust-powe
 - Workspace model: folders and API requests
 - Request editor with method, URL, headers, and body controls
 - Body mode support:
-	- none
-	- json
-	- raw (text/json/xml/html/javascript)
-	- form-data (text + file parts)
-	- x-www-form-urlencoded
-	- binary file body
-	- graphql (query + variables)
+  - none
+  - json
+  - raw (text/json/xml/html/javascript)
+  - form-data (text + file parts)
+  - x-www-form-urlencoded
+  - binary file body
+  - graphql (query + variables)
 - Response pane with:
-	- status code and label
-	- request duration (ms)
-	- response size (bytes)
-	- pretty/raw body toggle
-	- copy response body
+  - status code and label
+  - request duration (ms)
+  - response size (bytes)
+  - pretty/raw body toggle
+  - copy response body
 - Import/export workspace JSON via Rust filesystem commands
 - Theme support: light, dark, system
 - Resizable layout panels (sidebar/editor/response)
@@ -111,14 +111,14 @@ npm run tauri dev
 
 ## Available Scripts
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Start Vite dev server |
-| `npm run build` | Type-check and build frontend |
-| `npm run typecheck` | Run TypeScript checks |
-| `npm run test` | Run frontend unit tests |
-| `npm run preview` | Preview frontend build |
-| `npm run tauri dev` | Run desktop app in dev mode |
+| Command               | Description                      |
+| --------------------- | -------------------------------- |
+| `npm run dev`         | Start Vite dev server            |
+| `npm run build`       | Type-check and build frontend    |
+| `npm run typecheck`   | Run TypeScript checks            |
+| `npm run test`        | Run frontend unit tests          |
+| `npm run preview`     | Preview frontend build           |
+| `npm run tauri dev`   | Run desktop app in dev mode      |
 | `npm run tauri build` | Build production desktop bundles |
 
 ## Backend Tests
