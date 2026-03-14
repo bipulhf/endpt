@@ -125,9 +125,6 @@ const defaultWorkspace: Workspace = {
   folders: [],
 };
 
-const getAllRequestIds = (workspace: Workspace): string[] =>
-  workspace.folders.flatMap((folder) => folder.requests.map((request) => request.id));
-
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   workspace: defaultWorkspace,
   activeRequestId: null,
@@ -282,7 +279,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const fallbackId =
         openRequestIds[closeIndex] ??
         openRequestIds[closeIndex - 1] ??
-        getAllRequestIds(state.workspace)[0] ??
         null;
 
       return {

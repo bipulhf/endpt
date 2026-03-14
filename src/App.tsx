@@ -86,7 +86,7 @@ function App() {
   };
 
   return (
-    <div className="relative h-[100dvh] w-screen overflow-hidden bg-background text-foreground">
+    <div className="relative h-[100dvh] w-full overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-7rem] top-[-6rem] h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
         <div className="absolute right-[-4rem] top-10 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
@@ -94,16 +94,13 @@ function App() {
       </div>
       <Toaster richColors theme={theme} position="bottom-right" />
       <div className="relative flex h-full w-full">
-        <div className="app-shell flex h-full w-full overflow-hidden bg-background">
+        <div className="app-shell flex h-full w-full min-w-0 overflow-hidden bg-background">
           <div className="flex min-h-0 flex-1 flex-col lg:hidden">
             <div className="border-b border-border/70 px-2.5 py-2.5">
               <div className="flex items-start justify-between gap-2.5">
                 <div className="min-w-0">
                   <p className="eyebrow">Endpt</p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                      Compact workspace
-                    </h2>
                     <span
                       className={`inline-flex items-center gap-1 rounded-full border border-emerald-600/20 bg-emerald-600/10 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-400 px-2 py-1 text-[12px] font-semibold transition-all duration-300 ${
                         saved ? "opacity-100" : "opacity-0"
@@ -176,59 +173,63 @@ function App() {
             </div>
           </div>
 
-          <Group
-            orientation="horizontal"
-            className="hidden h-full w-full lg:flex"
-          >
-            <Panel id="sidebar" defaultSize="22%" minSize="15%" maxSize="35%">
-              <Sidebar onRequestSelected={() => setMobileView("editor")} />
-            </Panel>
-            <Separator
-              className="bg-border transition-colors data-[separator]:hover:bg-primary/50 data-[separator]:active:bg-primary"
-              style={{ width: 2 }}
-            />
-            <Panel id="main" defaultSize="78%" minSize="40%">
-              <Group orientation="vertical" className="h-full">
-                <Panel id="editor" defaultSize="55%" minSize="25%">
-                  <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-                    <div className="hidden flex-wrap items-center justify-between gap-2.5 border-b border-border/70 px-3 py-2.5 sm:px-4 lg:flex">
-                      <div className="min-w-0">
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <h2 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
-                            Compose and inspect traffic
-                          </h2>
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-full border border-emerald-600/20 bg-emerald-600/10 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-400 px-2.5 py-1 text-[12.5px] font-semibold transition-all duration-300 ${
-                              saved ? "opacity-100" : "opacity-0"
-                            }`}
-                          >
-                            <CheckCheck size={13} />
-                            Saved
-                          </span>
+          <div className="hidden h-full w-full lg:flex">
+            <Group orientation="horizontal" className="h-full w-full">
+              <Panel
+                id="sidebar"
+                defaultSize={"22%"}
+                minSize={"15%"}
+                maxSize={"35%"}
+              >
+                <Sidebar onRequestSelected={() => setMobileView("editor")} />
+              </Panel>
+              <Separator
+                className="bg-border transition-colors data-[separator]:hover:bg-primary/50 data-[separator]:active:bg-primary"
+                style={{ width: 2 }}
+              />
+              <Panel id="main" defaultSize={"78%"} minSize={"40%"}>
+                <Group orientation="vertical" className="h-full">
+                  <Panel id="editor" defaultSize={"55%"} minSize={"25%"}>
+                    <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+                      <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-border/70 px-3 py-2.5">
+                        <div className="min-w-0">
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <h2 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
+                              Compose and inspect traffic
+                            </h2>
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full border border-emerald-600/20 bg-emerald-600/10 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-400 px-2.5 py-1 text-[12.5px] font-semibold transition-all duration-300 ${
+                                saved ? "opacity-100" : "opacity-0"
+                              }`}
+                            >
+                              <CheckCheck size={13} />
+                              Saved
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <UpdateChecker />
+                          <ThemeToggle />
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <UpdateChecker />
-                        <ThemeToggle />
-                      </div>
+                      <RequestEditor
+                        onResponse={handleResponse}
+                        isSending={isSending}
+                        setIsSending={setIsSending}
+                      />
                     </div>
-                    <RequestEditor
-                      onResponse={handleResponse}
-                      isSending={isSending}
-                      setIsSending={setIsSending}
-                    />
-                  </div>
-                </Panel>
-                <Separator
-                  className="bg-border transition-colors data-[separator]:hover:bg-primary/50 data-[separator]:active:bg-primary"
-                  style={{ height: 2 }}
-                />
-                <Panel id="response" defaultSize="45%" minSize="15%">
-                  <ResponsePane response={response} isSending={isSending} />
-                </Panel>
-              </Group>
-            </Panel>
-          </Group>
+                  </Panel>
+                  <Separator
+                    className="bg-border transition-colors data-[separator]:hover:bg-primary/50 data-[separator]:active:bg-primary"
+                    style={{ height: 2 }}
+                  />
+                  <Panel id="response" defaultSize={"45%"} minSize={"15%"}>
+                    <ResponsePane response={response} isSending={isSending} />
+                  </Panel>
+                </Group>
+              </Panel>
+            </Group>
+          </div>
         </div>
       </div>
     </div>

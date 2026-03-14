@@ -187,81 +187,73 @@ export const Sidebar = ({ onRequestSelected }: SidebarProps): ReactElement => {
 
   return (
     <aside className="flex h-full w-full min-w-0 flex-col overflow-hidden bg-gradient-to-b from-card/95 via-card/80 to-background/75">
-      <div className="border-b border-border/70 p-1.5 sm:p-3 lg:p-4">
-        <div className="panel-surface rounded-[1rem] p-1.5 sm:rounded-[1.15rem] sm:p-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="eyebrow">Workspace</p>
-              <h1 className="mt-1 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                Endpt
-              </h1>
-            </div>
-          </div>
+      <div className="border-b border-border/70 p-1.5 sm:p-3">
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="mt-1 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+            Endpt
+          </h1>
+        </div>
 
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            <Button
-              size="sm"
-              onClick={() => {
-                void handleSave();
-              }}
-              className="flex-1 min-w-[5.5rem]"
-            >
-              <Save size={14} />
-              Save
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                void handleImport();
-              }}
-              className="flex-1 min-w-[5.5rem]"
-            >
-              <Upload size={14} />
-              Import
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                void handleExport();
-              }}
-              className="flex-1 min-w-[5.5rem]"
-            >
-              <Download size={14} />
-              Export
-            </Button>
-          </div>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <Button
+            size="sm"
+            onClick={() => {
+              void handleSave();
+            }}
+            className="flex-1 min-w-[5.5rem]"
+          >
+            <Save size={14} />
+            Save
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              void handleImport();
+            }}
+            className="flex-1 min-w-[5.5rem]"
+          >
+            <Upload size={14} />
+            Import
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void handleExport();
+            }}
+            className="flex-1 min-w-[5.5rem]"
+          >
+            <Download size={14} />
+            Export
+          </Button>
         </div>
       </div>
 
       <div className="border-b border-border/70 p-1.5 sm:p-3">
-        <div className="panel-subtle rounded-[1rem] p-1.5 sm:rounded-[1.1rem]">
-          <p className="eyebrow mb-1.5">Organize</p>
-          <div className="mb-1.5">
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search requests, URLs, methods..."
-              className="h-9"
-            />
-          </div>
-          <div className="flex gap-1.5">
-            <Input
-              value={newFolderName}
-              onChange={(event) => setNewFolderName(event.target.value)}
-              placeholder="New folder"
-              className="h-9"
-            />
-            <Button
-              size="icon"
-              onClick={handleCreateFolder}
-              aria-label="New folder"
-              disabled={!newFolderName.trim()}
-            >
-              <FolderPlus size={16} />
-            </Button>
-          </div>
+        <div className="mb-1.5">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search requests, URLs, methods..."
+            className="h-9"
+          />
+        </div>
+        <div className="flex gap-1.5">
+          <Input
+            value={newFolderName}
+            onChange={(event) => setNewFolderName(event.target.value)}
+            placeholder="New folder"
+            className="h-9"
+          />
+          <Button
+            size="icon"
+            onClick={handleCreateFolder}
+            aria-label="New folder"
+            disabled={!newFolderName.trim()}
+          >
+            <FolderPlus size={16} />
+          </Button>
         </div>
       </div>
 
