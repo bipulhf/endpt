@@ -1,37 +1,20 @@
 import {
-  ChevronDown,
-  ChevronRight,
   Download,
-  FilePlus,
   FolderPlus,
   Save,
-  Trash2,
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { FolderItem, EditingItem } from "./FolderItem";
 import { exportData, importData, saveLocalData } from "../services/ipc";
 import { useWorkspaceStore } from "../store/useWorkspaceStore";
-import { HttpMethod } from "../types";
 import { ReactElement, useState } from "react";
 
 interface SidebarProps {
   onRequestSelected?: () => void;
 }
-
-const methodClasses: Record<HttpMethod, string> = {
-  GET: "border-emerald-600/20 bg-emerald-600/10 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-400",
-  POST: "border-sky-600/20 bg-sky-600/10 text-sky-700 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-400",
-  PUT: "border-amber-600/20 bg-amber-600/10 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-400",
-  PATCH:
-    "border-fuchsia-600/20 bg-fuchsia-600/10 text-fuchsia-700 dark:border-fuchsia-400/20 dark:bg-fuchsia-400/10 dark:text-fuchsia-400",
-  DELETE:
-    "border-rose-600/20 bg-rose-600/10 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-400",
-  HEAD: "border-slate-600/20 bg-slate-600/10 text-slate-700 dark:border-slate-400/20 dark:bg-slate-400/10 dark:text-slate-400",
-  OPTIONS:
-    "border-slate-600/20 bg-slate-600/10 text-slate-700 dark:border-slate-400/20 dark:bg-slate-400/10 dark:text-slate-400",
-};
 
 export const Sidebar = ({ onRequestSelected }: SidebarProps): ReactElement => {
   const workspace = useWorkspaceStore((state) => state.workspace);
@@ -52,11 +35,7 @@ export const Sidebar = ({ onRequestSelected }: SidebarProps): ReactElement => {
   const [newFolderName, setNewFolderName] = useState("");
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
-  const [editingItem, setEditingItem] = useState<
-    | { kind: "folder"; id: string; value: string }
-    | { kind: "request"; id: string; folderId: string; value: string }
-    | null
-  >(null);
+  const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
 
   const handleCreateFolder = (): void => {
     if (!newFolderName.trim()) {
@@ -270,178 +249,23 @@ export const Sidebar = ({ onRequestSelected }: SidebarProps): ReactElement => {
 
         <div className="space-y-2">
           {filteredFolders.map(({ folder, requests }) => (
-            <div
+            <FolderItem
               key={folder.id}
-              className="panel-subtle rounded-[0.95rem] p-1.5 sm:rounded-[1rem] sm:p-2"
-            >
-              <div className="flex items-center gap-1.5 p-0.5">
-                <button
-                  type="button"
-                  onClick={() => toggleFolderCollapse(folder.id)}
-                  className="inline-flex min-h-[2.5rem] min-w-[2.5rem] items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
-                  aria-label="Toggle folder"
-                >
-                  {folder.collapsed ? (
-                    <ChevronRight size={16} />
-                  ) : (
-                    <ChevronDown size={16} />
-                  )}
-                </button>
-                <div
-                  className="min-w-0 flex-1"
-                  onDoubleClick={() =>
-                    startFolderRename(folder.id, folder.name)
-                  }
-                  title="Double-click to rename"
-                >
-                  {editingItem?.kind === "folder" &&
-                  editingItem.id === folder.id ? (
-                    <input
-                      autoFocus
-                      value={editingItem.value}
-                      onChange={(event) =>
-                        setEditingItem((current) =>
-                          current?.kind === "folder" && current.id === folder.id
-                            ? { ...current, value: event.target.value }
-                            : current,
-                        )
-                      }
-                      onBlur={commitRename}
-                      onClick={(event) => event.stopPropagation()}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          commitRename();
-                        }
-                        if (event.key === "Escape") {
-                          event.preventDefault();
-                          cancelRename();
-                        }
-                      }}
-                      className="control-field h-8 w-full rounded-lg px-2.5 py-1.5 text-sm font-semibold text-foreground"
-                    />
-                  ) : (
-                    <div className="truncate text-sm font-semibold text-foreground">
-                      {folder.name}
-                    </div>
-                  )}
-                  <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {folder.requests.length} requests
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleCreateRequest(folder.id)}
-                  className="inline-flex min-h-[2.5rem] min-w-[2.5rem] items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
-                  aria-label="New request"
-                >
-                  <FilePlus size={15} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteFolder(folder.id)}
-                  className="inline-flex min-h-[2.5rem] min-w-[2.5rem] items-center justify-center rounded-xl text-rose-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300"
-                  aria-label="Delete folder"
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-
-              {!folder.collapsed && (
-                <div className="mt-1.5 space-y-1.5">
-                  {requests.map((request) => (
-                    <div
-                      key={request.id}
-                      className={`group flex items-center gap-1.5 rounded-xl border px-2.5 py-1 transition-all ${
-                        activeRequestId === request.id
-                          ? "border-primary/30 bg-primary/10 shadow-lg shadow-primary/10"
-                          : "border-border/60 bg-background/40 hover:border-primary/20 hover:bg-accent/30"
-                      }`}
-                    >
-                      <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                        <span
-                          className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold ${methodClasses[request.method]}`}
-                        >
-                          {request.method}
-                        </span>
-                        {editingItem?.kind === "request" &&
-                        editingItem.id === request.id ? (
-                          <div className="min-w-0 flex-1">
-                            <input
-                              autoFocus
-                              value={editingItem.value}
-                              onChange={(event) =>
-                                setEditingItem((current) =>
-                                  current?.kind === "request" &&
-                                  current.id === request.id
-                                    ? { ...current, value: event.target.value }
-                                    : current,
-                                )
-                              }
-                              onBlur={commitRename}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter") {
-                                  event.preventDefault();
-                                  commitRename();
-                                }
-                                if (event.key === "Escape") {
-                                  event.preventDefault();
-                                  cancelRename();
-                                }
-                              }}
-                              className="control-field h-8 w-full rounded-lg px-2.5 py-1.5 text-sm font-medium text-foreground"
-                            />
-                            <div className="mt-1 truncate text-xs text-muted-foreground">
-                              {request.url || "No URL yet"}
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            className="min-w-0 flex-1 text-left"
-                            onClick={() => handleSelectRequest(request.id)}
-                          >
-                            <div
-                              className="min-w-0"
-                              onDoubleClick={(event) => {
-                                event.stopPropagation();
-                                startRequestRename(
-                                  folder.id,
-                                  request.id,
-                                  request.name,
-                                );
-                              }}
-                              title="Double-click to rename"
-                            >
-                              <div className="truncate text-sm font-medium text-foreground">
-                                {request.name}
-                              </div>
-                              <div className="truncate text-xs text-muted-foreground">
-                                {request.url || "No URL yet"}
-                              </div>
-                            </div>
-                          </button>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => deleteRequest(folder.id, request.id)}
-                        className="inline-flex min-h-[2.25rem] min-w-[2.25rem] items-center justify-center rounded-xl text-rose-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300"
-                        aria-label="Delete request"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  ))}
-
-                  {requests.length === 0 && (
-                    <div className="rounded-2xl border border-dashed border-border/70 px-3 py-5 text-center text-xs text-muted-foreground">
-                      This folder is empty. Add a request to start composing.
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+              folder={folder}
+              requests={requests}
+              activeRequestId={activeRequestId}
+              editingItem={editingItem}
+              onToggleCollapse={toggleFolderCollapse}
+              onSelectRequest={handleSelectRequest}
+              onCreateRequest={handleCreateRequest}
+              onDeleteFolder={deleteFolder}
+              onDeleteRequest={deleteRequest}
+              onStartFolderRename={startFolderRename}
+              onStartRequestRename={startRequestRename}
+              onEditingChange={setEditingItem}
+              onCommitRename={commitRename}
+              onCancelRename={cancelRename}
+            />
           ))}
 
           {filteredFolders.length === 0 && (

@@ -1,16 +1,12 @@
 import { Plus, Trash2 } from "lucide-react";
 import { ReactElement } from "react";
+import { createId } from "../lib/utils";
 import { QueryParam } from "../types";
 
 interface ParamsEditorProps {
   params: QueryParam[];
   onChange: (params: QueryParam[]) => void;
 }
-
-const createId = (): string =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2);
 
 const createParam = (): QueryParam => ({
   id: createId(),

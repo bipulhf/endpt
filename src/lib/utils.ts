@@ -3,6 +3,13 @@ import { twMerge } from "tailwind-merge";
 
 export const cn = (...inputs: ClassValue[]): string => twMerge(clsx(inputs));
 
+export const createId = (): string => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2);
+};
+
 export const formatBytes = (bytes: number): string => {
   if (bytes === 0) {
     return "0 B";

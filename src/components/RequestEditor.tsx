@@ -7,21 +7,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { open } from "@tauri-apps/plugin-dialog";
 import { RequestTabs } from "./RequestTabs";
 import { AuthEditor } from "./AuthEditor";
 import { ParamsEditor } from "./ParamsEditor";
+import { HeadersEditor, createHeader } from "./HeadersEditor";
+import { BodyEditor } from "./BodyEditor";
 import { executeHttpRequest, saveLocalData } from "../services/ipc";
 import { useWorkspaceStore } from "../store/useWorkspaceStore";
+import { HTTP_METHODS, METHOD_TEXT_COLORS } from "../constants/methods";
 import {
   AuthConfig,
-  BodyType,
-  FormDataRow,
   HeaderRow,
   HttpMethod,
   HttpResponse,
   QueryParam,
-  RawLanguage,
   RequestBody,
 } from "../types";
 
@@ -31,63 +30,7 @@ interface RequestEditorProps {
   setIsSending: (value: boolean) => void;
 }
 
-const methods: HttpMethod[] = [
-  "GET",
-  "POST",
-  "PUT",
-  "PATCH",
-  "DELETE",
-  "HEAD",
-  "OPTIONS",
-];
-
-const methodColors: Record<HttpMethod, string> = {
-  GET: "text-emerald-700 dark:text-emerald-400",
-  POST: "text-sky-700 dark:text-sky-400",
-  PUT: "text-amber-700 dark:text-amber-400",
-  PATCH: "text-fuchsia-700 dark:text-fuchsia-400",
-  DELETE: "text-rose-700 dark:text-rose-400",
-  HEAD: "text-muted-foreground",
-  OPTIONS: "text-muted-foreground",
-};
-
-const createHeader = (): HeaderRow => ({
-  id:
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2),
-  key: "",
-  value: "",
-  enabled: true,
-});
-
-const createFormRow = (): FormDataRow => ({
-  id:
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2),
-  key: "",
-  value: "",
-  type: "text",
-  enabled: true,
-});
-
-const bodyTypes: BodyType[] = [
-  "none",
-  "json",
-  "raw",
-  "form-data",
-  "x-www-form-urlencoded",
-  "binary",
-  "graphql",
-];
-const rawLanguages: RawLanguage[] = [
-  "text",
-  "json",
-  "xml",
-  "html",
-  "javascript",
-];
+type EditorTab = "params" | "headers" | "auth" | "body";
 
 export const RequestEditor = ({
   onResponse,
@@ -102,8 +45,6 @@ export const RequestEditor = ({
   const closeRequestTab = useWorkspaceStore((state) => state.closeRequestTab);
   const [activeTab, setActiveTab] = useState<EditorTab>("params");
   const [error, setError] = useState("");
-
-  type EditorTab = "params" | "headers" | "auth" | "body";
 
   const requestMap = useMemo(() => {
     const entries = workspace.folders.flatMap((folder) =>
@@ -157,54 +98,6 @@ export const RequestEditor = ({
     });
   };
 
-  const updateBody = (nextBody: RequestBody): void => {
-    if (!activeRequest) {
-      return;
-    }
-
-    updateRequest(activeRequest.id, { body: nextBody });
-  };
-
-  const updateCurrentBodyType = (type: BodyType): void => {
-    if (!activeRequest) {
-      return;
-    }
-
-    updateBody({
-      ...activeRequest.body,
-      type,
-      rawLanguage: type === "json" ? "json" : activeRequest.body.rawLanguage,
-    });
-  };
-
-  const updateFormRows = (
-    mode: "formData" | "urlEncoded",
-    updater: (rows: FormDataRow[]) => FormDataRow[],
-  ): void => {
-    if (!activeRequest) {
-      return;
-    }
-    updateBody({
-      ...activeRequest.body,
-      [mode]: updater(activeRequest.body[mode]),
-    });
-  };
-
-  const selectBinaryFile = async (): Promise<void> => {
-    if (!activeRequest) {
-      return;
-    }
-    const selected = await open({ multiple: false });
-    if (!selected || Array.isArray(selected)) {
-      return;
-    }
-
-    updateBody({
-      ...activeRequest.body,
-      binaryFilePath: selected,
-    });
-  };
-
   const removeHeader = (headerId: string): void => {
     if (!activeRequest) {
       return;
@@ -214,6 +107,14 @@ export const RequestEditor = ({
       (header) => header.id !== headerId,
     );
     updateRequest(activeRequest.id, { headers });
+  };
+
+  const updateBody = (nextBody: RequestBody): void => {
+    if (!activeRequest) {
+      return;
+    }
+
+    updateRequest(activeRequest.id, { body: nextBody });
   };
 
   const handleSend = async (): Promise<void> => {
@@ -297,16 +198,16 @@ export const RequestEditor = ({
               }
             >
               <SelectTrigger
-                className={`h-9 w-full shrink-0 font-semibold xl:w-[7.5rem] ${methodColors[activeRequest.method]}`}
+                className={`h-9 w-full shrink-0 font-semibold xl:w-[7.5rem] ${METHOD_TEXT_COLORS[activeRequest.method]}`}
               >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {methods.map((method) => (
+                {HTTP_METHODS.map((method) => (
                   <SelectItem
                     key={method}
                     value={method}
-                    className={methodColors[method]}
+                    className={METHOD_TEXT_COLORS[method]}
                   >
                     {method}
                   </SelectItem>
@@ -388,523 +289,31 @@ export const RequestEditor = ({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-      {activeTab === "params" && (
-        <ParamsEditor
-          params={activeRequest.queryParams ?? []}
-          onChange={updateQueryParams}
-        />
-      )}
+        {activeTab === "params" && (
+          <ParamsEditor
+            params={activeRequest.queryParams ?? []}
+            onChange={updateQueryParams}
+          />
+        )}
 
-      {activeTab === "headers" && (
-        <div className="panel-surface-strong min-h-0 min-w-0 flex-1 overflow-auto rounded-[1rem] p-2.5 sm:rounded-[1.2rem]">
-          <div className="space-y-2 sm:hidden">
-            {activeRequest.headers.map((header) => (
-              <div
-                key={header.id}
-                className="rounded-xl border border-border/70 bg-background/35 p-2.5"
-              >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={header.enabled}
-                      onChange={(event) =>
-                        updateHeader(header.id, "enabled", event.target.checked)
-                      }
-                      className="h-4 w-4 rounded border-input accent-primary"
-                    />
-                    Enabled
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => removeHeader(header.id)}
-                    className="rounded-lg border border-input/80 bg-background/70 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-rose-500/10 hover:text-rose-300"
-                  >
-                    Remove
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <input
-                    value={header.key}
-                    onChange={(event) =>
-                      updateHeader(header.id, "key", event.target.value)
-                    }
-                    placeholder="Content-Type"
-                    className="control-field rounded-xl px-3 py-2 text-sm text-foreground"
-                  />
-                  <input
-                    value={header.value}
-                    onChange={(event) =>
-                      updateHeader(header.id, "value", event.target.value)
-                    }
-                    placeholder="application/json"
-                    className="control-field rounded-xl px-3 py-2 text-sm text-foreground"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+        {activeTab === "headers" && (
+          <HeadersEditor
+            headers={activeRequest.headers}
+            onUpdate={updateHeader}
+            onAdd={addHeader}
+            onRemove={removeHeader}
+          />
+        )}
 
-          <div className="hidden overflow-x-auto sm:block">
-            <div className="min-w-[34rem]">
-              <div className="mb-3 grid grid-cols-[40px_minmax(10rem,1fr)_minmax(10rem,1fr)_40px] gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                <span>On</span>
-                <span>Key</span>
-                <span>Value</span>
-                <span />
-              </div>
+        {activeTab === "auth" && (
+          <AuthEditor auth={activeRequest.auth} onChange={updateAuth} />
+        )}
 
-              {activeRequest.headers.map((header) => (
-                <div
-                  key={header.id}
-                  className="mb-2 grid grid-cols-[40px_minmax(10rem,1fr)_minmax(10rem,1fr)_40px] gap-2"
-                >
-                  <input
-                    type="checkbox"
-                    checked={header.enabled}
-                    onChange={(event) =>
-                      updateHeader(header.id, "enabled", event.target.checked)
-                    }
-                    className="mt-3 h-4 w-4 rounded border-input accent-primary"
-                  />
-                  <input
-                    value={header.key}
-                    onChange={(event) =>
-                      updateHeader(header.id, "key", event.target.value)
-                    }
-                    placeholder="Content-Type"
-                    className="control-field rounded-xl px-3 py-2.5 text-sm text-foreground"
-                  />
-                  <input
-                    value={header.value}
-                    onChange={(event) =>
-                      updateHeader(header.id, "value", event.target.value)
-                    }
-                    placeholder="application/json"
-                    className="control-field rounded-xl px-3 py-2.5 text-sm text-foreground"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeHeader(header.id)}
-                    className="rounded-xl border border-input/80 bg-background/70 px-2 py-2 text-xs text-muted-foreground transition-colors hover:bg-rose-500/10 hover:text-rose-300"
-                  >
-                    X
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+        {activeTab === "body" && (
+          <BodyEditor body={activeRequest.body} onChange={updateBody} />
+        )}
 
-          <button
-            type="button"
-            onClick={addHeader}
-            className="mt-1 rounded-lg border border-input/80 bg-background/70 px-2.5 py-1.5 text-xs text-foreground transition-colors hover:bg-accent/30"
-          >
-            + Add Header
-          </button>
-        </div>
-      )}
-
-      {activeTab === "auth" && (
-        <AuthEditor auth={activeRequest.auth} onChange={updateAuth} />
-      )}
-
-      {activeTab === "body" && (
-        <div className="panel-surface-strong min-h-0 min-w-0 flex-1 overflow-auto rounded-[1rem] p-2.5 sm:rounded-[1.2rem]">
-          <div className="mb-2.5 flex flex-wrap gap-1.5">
-            {bodyTypes.map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => updateCurrentBodyType(type)}
-                className={`rounded-lg px-2.5 py-1.5 text-xs capitalize transition-all ${
-                  activeRequest.body.type === type
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : "bg-muted/70 text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-                }`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-
-          {(activeRequest.body.type === "json" ||
-            activeRequest.body.type === "raw") && (
-            <>
-              {activeRequest.body.type === "raw" && (
-                <Select
-                  value={activeRequest.body.rawLanguage}
-                  onValueChange={(value) =>
-                    updateBody({
-                      ...activeRequest.body,
-                      rawLanguage: value as RawLanguage,
-                    })
-                  }
-                >
-                  <SelectTrigger className="mb-2 w-[110px] text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rawLanguages.map((language) => (
-                      <SelectItem
-                        key={language}
-                        value={language}
-                        className="text-xs capitalize"
-                      >
-                        {language}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <textarea
-                value={activeRequest.body.raw}
-                onChange={(event) =>
-                  updateBody({
-                    ...activeRequest.body,
-                    raw: event.target.value,
-                  })
-                }
-                placeholder={
-                  activeRequest.body.type === "json"
-                    ? '{\n  "key": "value"\n}'
-                    : "Enter request body"
-                }
-                className="control-field min-h-[120px] w-full resize-y rounded-[1rem] p-2.5 font-mono text-sm text-foreground"
-              />
-            </>
-          )}
-
-          {activeRequest.body.type === "none" && (
-            <p className="py-6 text-sm text-muted-foreground">
-              This request does not have a body.
-            </p>
-          )}
-
-          {(activeRequest.body.type === "form-data" ||
-            activeRequest.body.type === "x-www-form-urlencoded") && (
-            <div className="space-y-2">
-              <div className="space-y-2 sm:hidden">
-                {(activeRequest.body.type === "form-data"
-                  ? activeRequest.body.formData
-                  : activeRequest.body.urlEncoded
-                ).map((row) => (
-                  <div
-                    key={row.id}
-                    className="rounded-xl border border-border/70 bg-background/35 p-2.5"
-                  >
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          checked={row.enabled}
-                          onChange={(event) =>
-                            updateFormRows(
-                              activeRequest.body.type === "form-data"
-                                ? "formData"
-                                : "urlEncoded",
-                              (rows) =>
-                                rows.map((current) =>
-                                  current.id === row.id
-                                    ? {
-                                        ...current,
-                                        enabled: event.target.checked,
-                                      }
-                                    : current,
-                                ),
-                            )
-                          }
-                          className="h-4 w-4 rounded border-input accent-primary"
-                        />
-                        Enabled
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateFormRows(
-                            activeRequest.body.type === "form-data"
-                              ? "formData"
-                              : "urlEncoded",
-                            (rows) =>
-                              rows.filter((current) => current.id !== row.id),
-                          )
-                        }
-                        className="rounded-lg border border-input/80 bg-background/70 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-rose-500/10 hover:text-rose-300"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      <input
-                        value={row.key}
-                        onChange={(event) =>
-                          updateFormRows(
-                            activeRequest.body.type === "form-data"
-                              ? "formData"
-                              : "urlEncoded",
-                            (rows) =>
-                              rows.map((current) =>
-                                current.id === row.id
-                                  ? { ...current, key: event.target.value }
-                                  : current,
-                              ),
-                          )
-                        }
-                        placeholder="Key"
-                        className="control-field rounded-xl px-3 py-2 text-sm text-foreground"
-                      />
-                      <input
-                        value={row.value}
-                        onChange={(event) =>
-                          updateFormRows(
-                            activeRequest.body.type === "form-data"
-                              ? "formData"
-                              : "urlEncoded",
-                            (rows) =>
-                              rows.map((current) =>
-                                current.id === row.id
-                                  ? { ...current, value: event.target.value }
-                                  : current,
-                              ),
-                          )
-                        }
-                        placeholder="Value"
-                        className="control-field rounded-xl px-3 py-2 text-sm text-foreground"
-                      />
-                      {activeRequest.body.type === "form-data" ? (
-                        <Select
-                          value={row.type}
-                          onValueChange={(value) =>
-                            updateFormRows("formData", (rows) =>
-                              rows.map((current) =>
-                                current.id === row.id
-                                  ? {
-                                      ...current,
-                                      type: value as "text" | "file",
-                                    }
-                                  : current,
-                              ),
-                            )
-                          }
-                        >
-                          <SelectTrigger className="text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="text" className="text-xs">
-                              text
-                            </SelectItem>
-                            <SelectItem value="file" className="text-xs">
-                              file
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="hidden overflow-x-auto sm:block">
-                <div className="min-w-[36rem]">
-                  <div
-                    className={`grid gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground ${activeRequest.body.type === "form-data" ? "grid-cols-[40px_minmax(9rem,1fr)_minmax(9rem,1fr)_120px_40px]" : "grid-cols-[40px_minmax(10rem,1fr)_minmax(10rem,1fr)_40px]"}`}
-                  >
-                    <span>On</span>
-                    <span>Key</span>
-                    <span>Value</span>
-                    {activeRequest.body.type === "form-data" ? (
-                      <span>Type</span>
-                    ) : null}
-                    <span />
-                  </div>
-
-                  {(activeRequest.body.type === "form-data"
-                    ? activeRequest.body.formData
-                    : activeRequest.body.urlEncoded
-                  ).map((row) => (
-                    <div
-                      key={row.id}
-                      className={`mt-2 grid gap-2 ${activeRequest.body.type === "form-data" ? "grid-cols-[40px_minmax(9rem,1fr)_minmax(9rem,1fr)_120px_40px]" : "grid-cols-[40px_minmax(10rem,1fr)_minmax(10rem,1fr)_40px]"}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={row.enabled}
-                        onChange={(event) =>
-                          updateFormRows(
-                            activeRequest.body.type === "form-data"
-                              ? "formData"
-                              : "urlEncoded",
-                            (rows) =>
-                              rows.map((current) =>
-                                current.id === row.id
-                                  ? {
-                                      ...current,
-                                      enabled: event.target.checked,
-                                    }
-                                  : current,
-                              ),
-                          )
-                        }
-                        className="mt-3 h-4 w-4 rounded border-input accent-primary"
-                      />
-                      <input
-                        value={row.key}
-                        onChange={(event) =>
-                          updateFormRows(
-                            activeRequest.body.type === "form-data"
-                              ? "formData"
-                              : "urlEncoded",
-                            (rows) =>
-                              rows.map((current) =>
-                                current.id === row.id
-                                  ? { ...current, key: event.target.value }
-                                  : current,
-                              ),
-                          )
-                        }
-                        className="control-field rounded-xl px-3 py-2.5 text-sm text-foreground"
-                      />
-                      <input
-                        value={row.value}
-                        onChange={(event) =>
-                          updateFormRows(
-                            activeRequest.body.type === "form-data"
-                              ? "formData"
-                              : "urlEncoded",
-                            (rows) =>
-                              rows.map((current) =>
-                                current.id === row.id
-                                  ? { ...current, value: event.target.value }
-                                  : current,
-                              ),
-                          )
-                        }
-                        className="control-field rounded-xl px-3 py-2.5 text-sm text-foreground"
-                      />
-                      {activeRequest.body.type === "form-data" ? (
-                        <Select
-                          value={row.type}
-                          onValueChange={(value) =>
-                            updateFormRows("formData", (rows) =>
-                              rows.map((current) =>
-                                current.id === row.id
-                                  ? {
-                                      ...current,
-                                      type: value as "text" | "file",
-                                    }
-                                  : current,
-                              ),
-                            )
-                          }
-                        >
-                          <SelectTrigger className="text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="text" className="text-xs">
-                              text
-                            </SelectItem>
-                            <SelectItem value="file" className="text-xs">
-                              file
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateFormRows(
-                            activeRequest.body.type === "form-data"
-                              ? "formData"
-                              : "urlEncoded",
-                            (rows) =>
-                              rows.filter((current) => current.id !== row.id),
-                          )
-                        }
-                        className="rounded-xl border border-input/80 bg-background/70 px-2 py-2 text-xs text-muted-foreground transition-colors hover:bg-rose-500/10 hover:text-rose-300"
-                      >
-                        X
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  updateFormRows(
-                    activeRequest.body.type === "form-data"
-                      ? "formData"
-                      : "urlEncoded",
-                    (rows) => [...rows, createFormRow()],
-                  )
-                }
-                className="rounded-lg border border-input/80 bg-background/70 px-2.5 py-1.5 text-xs text-foreground transition-colors hover:bg-accent/30"
-              >
-                + Add Row
-              </button>
-            </div>
-          )}
-
-          {activeRequest.body.type === "binary" && (
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => {
-                  void selectBinaryFile();
-                }}
-                className="rounded-lg border border-input/80 bg-background/70 px-2.5 py-1.5 text-xs text-foreground transition-colors hover:bg-accent/30"
-              >
-                Select File
-              </button>
-              <p className="text-xs text-muted-foreground">
-                {activeRequest.body.binaryFilePath ?? "No file selected"}
-              </p>
-            </div>
-          )}
-
-          {activeRequest.body.type === "graphql" && (
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                Query
-              </label>
-              <textarea
-                value={activeRequest.body.graphql.query}
-                onChange={(event) =>
-                  updateBody({
-                    ...activeRequest.body,
-                    graphql: {
-                      ...activeRequest.body.graphql,
-                      query: event.target.value,
-                    },
-                  })
-                }
-                className="control-field min-h-[100px] w-full resize-y rounded-[1rem] p-2.5 font-mono text-sm text-foreground"
-              />
-              <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                Variables (JSON)
-              </label>
-              <textarea
-                value={activeRequest.body.graphql.variables}
-                onChange={(event) =>
-                  updateBody({
-                    ...activeRequest.body,
-                    graphql: {
-                      ...activeRequest.body.graphql,
-                      variables: event.target.value,
-                    },
-                  })
-                }
-                className="control-field min-h-[80px] w-full resize-y rounded-[1rem] p-2.5 font-mono text-sm text-foreground"
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {error && <div className="mt-3 text-sm text-rose-300">{error}</div>}
+        {error && <div className="mt-3 text-sm text-rose-300">{error}</div>}
       </div>
     </section>
   );
