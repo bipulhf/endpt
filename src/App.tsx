@@ -97,8 +97,9 @@ function App() {
         <div className="app-shell flex h-full w-full min-w-0 overflow-hidden bg-background">
           <div className="flex min-h-0 flex-1 flex-col lg:hidden">
             <div className="border-b border-border/70 px-2.5 py-2.5">
-              <div className="flex items-start justify-between gap-2.5">
-                <div className="min-w-0">
+              <div className="flex items-center justify-between gap-2.5">
+                <div className="flex min-w-0 items-center gap-2">
+                  <img src="/icon.png" alt="Endpt" className="h-6 w-6" />
                   <p className="eyebrow">Endpt</p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <span

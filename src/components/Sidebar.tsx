@@ -188,10 +188,13 @@ export const Sidebar = ({ onRequestSelected }: SidebarProps): ReactElement => {
   return (
     <aside className="flex h-full w-full min-w-0 flex-col overflow-hidden bg-gradient-to-b from-card/95 via-card/80 to-background/75">
       <div className="border-b border-border/70 p-1.5 sm:p-3">
-        <div className="flex items-start justify-between gap-3">
-          <h1 className="mt-1 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-            Endpt
-          </h1>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <img src="/icon.png" alt="Endpt" className="h-7 w-7 sm:h-8 sm:w-8" />
+            <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+              Endpt
+            </h1>
+          </div>
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
