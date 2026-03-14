@@ -4,7 +4,8 @@
 [![Build](https://github.com/bipulhf/endpt/actions/workflows/release.yml/badge.svg)](https://github.com/bipulhf/endpt/actions/workflows/release.yml)
 [![License](https://img.shields.io/github/license/bipulhf/endpt)](LICENSE)
 
-![Endpt Logo](main_logo.png =100x100)
+<!-- ![Endpt Logo](main_logo.png) -->
+<img src="main_logo.png" alt="Endpt Logo" width="100" height="100">
 
 Endpt is a high-performance desktop API client built with Tauri v2, React, TypeScript, and Rust.
 
