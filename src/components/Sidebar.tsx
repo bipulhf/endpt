@@ -215,6 +215,7 @@ export const Sidebar = ({ onRequestSelected }: SidebarProps): ReactElement => {
       <div className="border-b border-border/70 p-1.5 sm:p-3">
         <div className="mb-1.5">
           <Input
+            data-undo-scope="workspace"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search requests, URLs, methods..."
@@ -223,6 +224,7 @@ export const Sidebar = ({ onRequestSelected }: SidebarProps): ReactElement => {
         </div>
         <div className="flex gap-1.5">
           <Input
+            data-undo-scope="workspace"
             value={newFolderName}
             onChange={(event) => setNewFolderName(event.target.value)}
             placeholder="New folder"

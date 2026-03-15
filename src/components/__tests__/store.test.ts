@@ -5,6 +5,8 @@ beforeEach(() => {
   useWorkspaceStore.setState({
     workspace: { version: 2, folders: [] },
     activeRequestId: null,
+    openRequestIds: [],
+    history: { past: [], future: [] },
   });
 });
 
@@ -50,5 +52,18 @@ describe("createRequest", () => {
 
     const state = useWorkspaceStore.getState();
     expect(state.activeRequestId).toBe(state.workspace.folders[0].requests[0].id);
+  });
+});
+
+describe("undo/redo", () => {
+  it("restores the previous workspace snapshot", () => {
+    useWorkspaceStore.getState().createFolder("Auth");
+    expect(useWorkspaceStore.getState().workspace.folders).toHaveLength(1);
+
+    useWorkspaceStore.getState().undo();
+    expect(useWorkspaceStore.getState().workspace.folders).toHaveLength(0);
+
+    useWorkspaceStore.getState().redo();
+    expect(useWorkspaceStore.getState().workspace.folders).toHaveLength(1);
   });
 });

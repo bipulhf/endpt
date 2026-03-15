@@ -171,7 +171,10 @@ export const RequestEditor = ({
   }
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-2.5 sm:p-2 lg:p-2">
+    <section
+      data-undo-scope="workspace"
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-2.5 sm:p-2 lg:p-2"
+    >
       <div className="shrink-0">
         <RequestTabs
           tabs={openTabs.map((request) => ({

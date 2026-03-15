@@ -68,6 +68,7 @@ export const FolderItem = ({
         editingItem.id === folder.id ? (
           <input
             autoFocus
+            data-undo-scope="workspace"
             value={editingItem.value}
             onChange={(event) =>
               onEditingChange(
@@ -139,6 +140,7 @@ export const FolderItem = ({
                 <div className="min-w-0 flex-1">
                   <input
                     autoFocus
+                    data-undo-scope="workspace"
                     value={editingItem.value}
                     onChange={(event) =>
                       onEditingChange(

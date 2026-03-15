@@ -67,6 +67,42 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
+      const key = e.key.toLowerCase();
+      const metaOrCtrl = e.ctrlKey || e.metaKey;
+      const isUndo = metaOrCtrl && key === "z" && !e.shiftKey;
+      const isRedo = metaOrCtrl && key === "z" && e.shiftKey;
+      const target = e.target instanceof HTMLElement ? e.target : null;
+      const isEditableTarget =
+        target?.isContentEditable ||
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT";
+      const allowWorkspaceUndo =
+        !isEditableTarget ||
+        Boolean(target?.closest('[data-undo-scope="workspace"]'));
+
+      if ((isUndo || isRedo) && !allowWorkspaceUndo) {
+        return;
+      }
+
+      if (isUndo) {
+        e.preventDefault();
+        const { undo, canUndo } = useWorkspaceStore.getState();
+        if (canUndo()) {
+          undo();
+        }
+        return;
+      }
+
+      if (isRedo) {
+        e.preventDefault();
+        const { redo, canRedo } = useWorkspaceStore.getState();
+        if (canRedo()) {
+          redo();
+        }
+        return;
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
         void saveLocalData(workspace).then(() => {
