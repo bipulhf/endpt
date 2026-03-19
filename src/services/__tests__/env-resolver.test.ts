@@ -107,4 +107,42 @@ describe("resolveRequestTemplate", () => {
     expect(result.diagnostics.depthExceeded.length).toBeGreaterThan(0);
     expect(hasResolverIssues(result.diagnostics)).toBe(true);
   });
+
+  it("resolves gRPC, websocket and SSE template fields", () => {
+    const request = createDefaultRequest("Realtime");
+    request.protocol = "websocket";
+    request.grpc.endpoint = "{{HOST}}:50051";
+    request.grpc.methodPath = "/svc.Users/{{METHOD}}";
+    request.grpc.payloadJson = '{"id":"{{USER_ID}}"}';
+    request.grpc.metadata = [
+      { id: "m1", key: "x-token", value: "{{TOKEN}}", enabled: true },
+    ];
+    request.websocket.url = "wss://{{HOST}}/socket";
+    request.websocket.initialMessage = '{"action":"{{ACTION}}"}';
+    request.sse.url = "https://{{HOST}}/events";
+    request.sse.headers = [
+      { id: "h1", key: "Authorization", value: "Bearer {{TOKEN}}", enabled: true },
+    ];
+
+    const result = resolveRequestTemplate(
+      request,
+      buildVariables([
+        { key: "HOST", value: "api.example.com" },
+        { key: "METHOD", value: "GetUser" },
+        { key: "USER_ID", value: "42" },
+        { key: "TOKEN", value: "abc123" },
+        { key: "ACTION", value: "ping" },
+      ]),
+    );
+
+    expect(result.request.grpc.endpoint).toBe("api.example.com:50051");
+    expect(result.request.grpc.methodPath).toBe("/svc.Users/GetUser");
+    expect(result.request.grpc.payloadJson).toBe('{"id":"42"}');
+    expect(result.request.grpc.metadata[0].value).toBe("abc123");
+    expect(result.request.websocket.url).toBe("wss://api.example.com/socket");
+    expect(result.request.websocket.initialMessage).toBe('{"action":"ping"}');
+    expect(result.request.sse.url).toBe("https://api.example.com/events");
+    expect(result.request.sse.headers[0].value).toBe("Bearer abc123");
+    expect(hasResolverIssues(result.diagnostics)).toBe(false);
+  });
 });

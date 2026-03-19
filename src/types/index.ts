@@ -7,6 +7,8 @@ export type HttpMethod =
   | "HEAD"
   | "OPTIONS";
 
+export type RequestProtocol = "http" | "grpc" | "websocket" | "sse";
+
 export type BodyType =
   | "none"
   | "json"
@@ -62,16 +64,42 @@ export interface RequestBody {
   graphql: GraphQLBody;
 }
 
+export interface GrpcRequestConfig {
+  endpoint: string;
+  useTls: boolean;
+  protoFiles: string[];
+  methodPath: string;
+  metadata: HeaderRow[];
+  payloadJson: string;
+}
+
+export interface WebSocketRequestConfig {
+  url: string;
+  headers: HeaderRow[];
+  subprotocol: string;
+  initialMessage: string;
+}
+
+export interface SseRequestConfig {
+  url: string;
+  headers: HeaderRow[];
+}
+
 export interface ApiRequest {
   id: string;
   name: string;
+  protocol: RequestProtocol;
   method: HttpMethod;
   url: string;
   headers: HeaderRow[];
   body: RequestBody;
   queryParams: QueryParam[];
   auth: AuthConfig;
+  grpc: GrpcRequestConfig;
+  websocket: WebSocketRequestConfig;
+  sse: SseRequestConfig;
   lastResponse?: HttpResponse | null;
+  lastGrpcResponse?: GrpcUnaryResponse | null;
 }
 
 export interface Folder {
@@ -107,4 +135,41 @@ export interface HttpResponse {
   body: string;
   elapsed_ms: number;
   size_bytes: number;
+}
+
+export interface GrpcMethodDescriptor {
+  method_path: string;
+  service: string;
+  method: string;
+  request_type?: string;
+  response_type?: string;
+}
+
+export interface GrpcProtoImportResult {
+  proto_files: string[];
+  methods: GrpcMethodDescriptor[];
+}
+
+export interface GrpcUnaryResponse {
+  status_code: number;
+  status_text: string;
+  headers: Record<string, string>;
+  trailers: Record<string, string>;
+  body: string;
+  elapsed_ms: number;
+  size_bytes: number;
+}
+
+export type StreamProtocol = "websocket" | "sse";
+export type StreamDirection = "inbound" | "outbound" | "status" | "error";
+
+export interface StreamEvent {
+  request_id: string;
+  session_id: string;
+  protocol: StreamProtocol;
+  direction: StreamDirection;
+  timestamp_ms: number;
+  payload: string;
+  event_type?: string;
+  metadata?: Record<string, string>;
 }

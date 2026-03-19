@@ -3,9 +3,12 @@ import { createId } from "../lib/utils";
 import { saveLocalData } from "../services/ipc";
 import { ApiRequest, Environment, EnvironmentVariable, Workspace } from "../types";
 import {
+  createDefaultGrpcConfig,
   createDefaultEnvironment,
   createDefaultEnvironmentVariable,
   createDefaultRequest,
+  createDefaultSseConfig,
+  createDefaultWebSocketConfig,
   ENV_KEY_PATTERN,
   normalizeWorkspace,
   WORKSPACE_VERSION,
@@ -41,6 +44,16 @@ interface WorkspaceState {
   updateRequest: (requestId: string, partial: Partial<ApiRequest>) => void;
   setActiveRequest: (id: string | null) => void;
   closeRequestTab: (id: string) => void;
+  setRequestProtocol: (requestId: string, protocol: ApiRequest["protocol"]) => void;
+  updateGrpcConfig: (
+    requestId: string,
+    partial: Partial<ApiRequest["grpc"]>,
+  ) => void;
+  updateWebSocketConfig: (
+    requestId: string,
+    partial: Partial<ApiRequest["websocket"]>,
+  ) => void;
+  updateSseConfig: (requestId: string, partial: Partial<ApiRequest["sse"]>) => void;
   createEnvironment: (name?: string) => void;
   renameEnvironment: (environmentId: string, name: string) => void;
   deleteEnvironment: (environmentId: string) => void;
@@ -337,6 +350,110 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         history: buildNextHistory(state),
       };
     });
+  },
+
+  setRequestProtocol: (requestId, protocol) => {
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        folders: state.workspace.folders.map((folder) => ({
+          ...folder,
+          requests: folder.requests.map((request) =>
+            request.id === requestId
+              ? {
+                ...request,
+                protocol,
+                grpc: request.grpc ?? createDefaultGrpcConfig(),
+                websocket: request.websocket ?? createDefaultWebSocketConfig(),
+                sse: request.sse ?? createDefaultSseConfig(),
+              }
+              : request,
+          ),
+        })),
+      },
+      history: buildNextHistory(state),
+    }));
+  },
+
+  updateGrpcConfig: (requestId, partial) => {
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        folders: state.workspace.folders.map((folder) => ({
+          ...folder,
+          requests: folder.requests.map((request) =>
+            request.id === requestId
+              ? {
+                ...request,
+                grpc: {
+                  ...(request.grpc ?? createDefaultGrpcConfig()),
+                  ...partial,
+                  protoFiles: Array.isArray(partial.protoFiles)
+                    ? partial.protoFiles
+                    : request.grpc?.protoFiles ?? [],
+                  metadata: Array.isArray(partial.metadata)
+                    ? partial.metadata
+                    : request.grpc?.metadata ?? [],
+                },
+              }
+              : request,
+          ),
+        })),
+      },
+      history: buildNextHistory(state),
+    }));
+  },
+
+  updateWebSocketConfig: (requestId, partial) => {
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        folders: state.workspace.folders.map((folder) => ({
+          ...folder,
+          requests: folder.requests.map((request) =>
+            request.id === requestId
+              ? {
+                ...request,
+                websocket: {
+                  ...(request.websocket ?? createDefaultWebSocketConfig()),
+                  ...partial,
+                  headers: Array.isArray(partial.headers)
+                    ? partial.headers
+                    : request.websocket?.headers ?? [],
+                },
+              }
+              : request,
+          ),
+        })),
+      },
+      history: buildNextHistory(state),
+    }));
+  },
+
+  updateSseConfig: (requestId, partial) => {
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        folders: state.workspace.folders.map((folder) => ({
+          ...folder,
+          requests: folder.requests.map((request) =>
+            request.id === requestId
+              ? {
+                ...request,
+                sse: {
+                  ...(request.sse ?? createDefaultSseConfig()),
+                  ...partial,
+                  headers: Array.isArray(partial.headers)
+                    ? partial.headers
+                    : request.sse?.headers ?? [],
+                },
+              }
+              : request,
+          ),
+        })),
+      },
+      history: buildNextHistory(state),
+    }));
   },
 
   createEnvironment: (name) => {

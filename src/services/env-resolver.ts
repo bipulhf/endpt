@@ -152,6 +152,38 @@ export const resolveRequestTemplate = (
         value: resolveText(row.value),
       })),
     },
+    grpc: {
+      ...request.grpc,
+      endpoint: resolveText(request.grpc.endpoint),
+      methodPath: resolveText(request.grpc.methodPath),
+      payloadJson: resolveText(request.grpc.payloadJson),
+      protoFiles: request.grpc.protoFiles.map((path) => resolveText(path)),
+      metadata: request.grpc.metadata.map((item) => ({
+        ...item,
+        key: resolveText(item.key),
+        value: resolveText(item.value),
+      })),
+    },
+    websocket: {
+      ...request.websocket,
+      url: resolveText(request.websocket.url),
+      subprotocol: resolveText(request.websocket.subprotocol),
+      initialMessage: resolveText(request.websocket.initialMessage),
+      headers: request.websocket.headers.map((item) => ({
+        ...item,
+        key: resolveText(item.key),
+        value: resolveText(item.value),
+      })),
+    },
+    sse: {
+      ...request.sse,
+      url: resolveText(request.sse.url),
+      headers: request.sse.headers.map((item) => ({
+        ...item,
+        key: resolveText(item.key),
+        value: resolveText(item.value),
+      })),
+    },
   };
 
   return {

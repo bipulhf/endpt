@@ -1,6 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { ApiRequest, HttpResponse, Workspace } from "../types";
+import {
+  ApiRequest,
+  GrpcMethodDescriptor,
+  GrpcProtoImportResult,
+  GrpcUnaryResponse,
+  HttpResponse,
+  StreamEvent,
+  Workspace,
+} from "../types";
 import { buildHeaders, buildUrl } from "./request-builder";
 
 const isWorkspace = (value: unknown): value is Workspace => {
@@ -91,6 +100,141 @@ export const executeHttpRequest = async (request: ApiRequest): Promise<HttpRespo
       headers,
       body,
     },
+  });
+};
+
+export const importGrpcProtoFiles = async (): Promise<GrpcProtoImportResult | null> => {
+  const selected = await open({
+    multiple: true,
+    filters: [{ name: "Proto", extensions: ["proto"] }],
+  });
+
+  if (!selected) {
+    return null;
+  }
+
+  const paths = Array.isArray(selected) ? selected : [selected];
+  if (paths.length === 0) {
+    return null;
+  }
+
+  return invoke<GrpcProtoImportResult>("import_proto_files", { paths });
+};
+
+export const listGrpcMethods = async (
+  protoFiles: string[],
+): Promise<GrpcMethodDescriptor[]> => {
+  return invoke<GrpcMethodDescriptor[]>("list_grpc_methods", {
+    proto_files: protoFiles,
+    protoFiles,
+  });
+};
+
+export const executeGrpcUnaryRequest = async (
+  request: ApiRequest,
+): Promise<GrpcUnaryResponse> => {
+  const metadata = request.grpc.metadata
+    .filter((row) => row.enabled && row.key.trim().length > 0)
+    .reduce<Record<string, string>>((acc, row) => {
+      acc[row.key.trim()] = row.value;
+      return acc;
+    }, {});
+
+  return invoke<GrpcUnaryResponse>("call_grpc_unary", {
+    payload: {
+      endpoint: request.grpc.endpoint,
+      use_tls: request.grpc.useTls,
+      useTls: request.grpc.useTls,
+      proto_files: request.grpc.protoFiles,
+      protoFiles: request.grpc.protoFiles,
+      method_path: request.grpc.methodPath,
+      methodPath: request.grpc.methodPath,
+      metadata,
+      body_json: request.grpc.payloadJson,
+      bodyJson: request.grpc.payloadJson,
+    },
+  });
+};
+
+const toEnabledHeaderMap = (
+  rows: ApiRequest["websocket"]["headers"],
+): Record<string, string> =>
+  rows
+    .filter((row) => row.enabled && row.key.trim().length > 0)
+    .reduce<Record<string, string>>((acc, row) => {
+      acc[row.key.trim()] = row.value;
+      return acc;
+    }, {});
+
+export const wsConnect = async (
+  requestId: string,
+  config: ApiRequest["websocket"],
+): Promise<string> => {
+  const response = await invoke<{ session_id: string }>("ws_connect", {
+    payload: {
+      request_id: requestId,
+      requestId,
+      url: config.url,
+      headers: toEnabledHeaderMap(config.headers),
+      subprotocol: config.subprotocol.trim() || null,
+    },
+  });
+
+  return response.session_id;
+};
+
+export const wsSend = async (
+  sessionId: string,
+  message: string,
+): Promise<void> => {
+  await invoke("ws_send", {
+    payload: {
+      session_id: sessionId,
+      sessionId,
+      message,
+    },
+  });
+};
+
+export const wsDisconnect = async (sessionId: string): Promise<void> => {
+  await invoke("ws_disconnect", {
+    payload: {
+      session_id: sessionId,
+      sessionId,
+    },
+  });
+};
+
+export const sseConnect = async (
+  requestId: string,
+  config: ApiRequest["sse"],
+): Promise<string> => {
+  const response = await invoke<{ session_id: string }>("sse_connect", {
+    payload: {
+      request_id: requestId,
+      requestId,
+      url: config.url,
+      headers: toEnabledHeaderMap(config.headers),
+    },
+  });
+
+  return response.session_id;
+};
+
+export const sseDisconnect = async (sessionId: string): Promise<void> => {
+  await invoke("sse_disconnect", {
+    payload: {
+      session_id: sessionId,
+      sessionId,
+    },
+  });
+};
+
+export const listenStreamEvents = async (
+  handler: (event: StreamEvent) => void,
+): Promise<UnlistenFn> => {
+  return listen<StreamEvent>("stream_event", (event) => {
+    handler(event.payload);
   });
 };
 

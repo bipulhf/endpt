@@ -4,11 +4,16 @@ mod models;
 use commands::fs::{
     export_workspace, import_workspace, load_local_workspace, save_local_workspace,
 };
+use commands::grpc::{call_grpc_unary, import_proto_files, list_grpc_methods};
 use commands::network::{make_binary_request, make_http_request, make_multipart_request};
+use commands::stream::{
+    sse_connect, sse_disconnect, ws_connect, ws_disconnect, ws_send, RealtimeSessionManager,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(RealtimeSessionManager::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -17,6 +22,14 @@ pub fn run() {
             make_http_request,
             make_multipart_request,
             make_binary_request,
+            import_proto_files,
+            list_grpc_methods,
+            call_grpc_unary,
+            ws_connect,
+            ws_send,
+            ws_disconnect,
+            sse_connect,
+            sse_disconnect,
             export_workspace,
             import_workspace,
             save_local_workspace,

@@ -5,15 +5,19 @@ import {
   Environment,
   EnvironmentVariable,
   FormDataRow,
+  GrpcRequestConfig,
   HeaderRow,
   HttpMethod,
   QueryParam,
   RequestBody,
+  RequestProtocol,
+  SseRequestConfig,
+  WebSocketRequestConfig,
   Workspace,
 } from "../types";
 
 export const ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
-export const WORKSPACE_VERSION = 3;
+export const WORKSPACE_VERSION = 4;
 
 export const createDefaultHeader = (): HeaderRow => ({
   id: createId(),
@@ -40,6 +44,27 @@ export const createDefaultBody = (): RequestBody => ({
     query: "",
     variables: "",
   },
+});
+
+export const createDefaultGrpcConfig = (): GrpcRequestConfig => ({
+  endpoint: "",
+  useTls: true,
+  protoFiles: [],
+  methodPath: "",
+  metadata: [],
+  payloadJson: "{\n  \n}",
+});
+
+export const createDefaultWebSocketConfig = (): WebSocketRequestConfig => ({
+  url: "",
+  headers: [],
+  subprotocol: "",
+  initialMessage: "",
+});
+
+export const createDefaultSseConfig = (): SseRequestConfig => ({
+  url: "",
+  headers: [],
 });
 
 export const createDefaultEnvironmentVariable = (): EnvironmentVariable => ({
@@ -123,6 +148,21 @@ const normalizeHeaderRows = (value: unknown): HeaderRow[] => {
   return normalized.length > 0 ? normalized : [createDefaultHeader()];
 };
 
+const normalizeOptionalHeaderRows = (value: unknown): HeaderRow[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((item): item is Partial<HeaderRow> => Boolean(item && typeof item === "object"))
+    .map((item) => ({
+      id: typeof item.id === "string" && item.id.trim().length > 0 ? item.id : createId(),
+      key: typeof item.key === "string" ? item.key : "",
+      value: typeof item.value === "string" ? item.value : "",
+      enabled: item.enabled !== false,
+    }));
+};
+
 const normalizeQueryParams = (value: unknown): QueryParam[] => {
   if (!Array.isArray(value)) {
     return [];
@@ -164,6 +204,18 @@ const normalizeRequest = (entry: unknown): ApiRequest | null => {
   body.formData = normalizeFormRows(body.formData);
   body.urlEncoded = normalizeFormRows(body.urlEncoded);
 
+  const protocol: RequestProtocol = (
+    request.protocol === "grpc" ||
+    request.protocol === "websocket" ||
+    request.protocol === "sse"
+  )
+    ? request.protocol
+    : "http";
+
+  const grpcPartial = request.grpc as Partial<GrpcRequestConfig> | undefined;
+  const websocketPartial = request.websocket as Partial<WebSocketRequestConfig> | undefined;
+  const ssePartial = request.sse as Partial<SseRequestConfig> | undefined;
+
   return {
     id: typeof request.id === "string" && request.id.trim().length > 0
       ? request.id
@@ -171,6 +223,7 @@ const normalizeRequest = (entry: unknown): ApiRequest | null => {
     name: typeof request.name === "string" && request.name.trim().length > 0
       ? request.name
       : "Untitled Request",
+    protocol,
     method: HTTP_METHODS.includes(request.method as HttpMethod)
       ? (request.method as HttpMethod)
       : "GET",
@@ -179,7 +232,26 @@ const normalizeRequest = (entry: unknown): ApiRequest | null => {
     body,
     queryParams: normalizeQueryParams(request.queryParams),
     auth: normalizeAuth(request.auth),
+    grpc: {
+      ...createDefaultGrpcConfig(),
+      ...grpcPartial,
+      protoFiles: Array.isArray(grpcPartial?.protoFiles)
+        ? grpcPartial?.protoFiles.filter((value): value is string => typeof value === "string")
+        : [],
+      metadata: normalizeOptionalHeaderRows(grpcPartial?.metadata),
+    },
+    websocket: {
+      ...createDefaultWebSocketConfig(),
+      ...websocketPartial,
+      headers: normalizeOptionalHeaderRows(websocketPartial?.headers),
+    },
+    sse: {
+      ...createDefaultSseConfig(),
+      ...ssePartial,
+      headers: normalizeOptionalHeaderRows(ssePartial?.headers),
+    },
     lastResponse: request.lastResponse ?? null,
+    lastGrpcResponse: request.lastGrpcResponse ?? null,
   };
 };
 
@@ -283,11 +355,16 @@ export const normalizeWorkspace = (data: unknown): Workspace => {
 export const createDefaultRequest = (name: string): ApiRequest => ({
   id: createId(),
   name,
+  protocol: "http",
   method: "GET",
   url: "",
   headers: [createDefaultHeader()],
   queryParams: [],
   auth: createDefaultAuth(),
   body: createDefaultBody(),
+  grpc: createDefaultGrpcConfig(),
+  websocket: createDefaultWebSocketConfig(),
+  sse: createDefaultSseConfig(),
   lastResponse: null,
+  lastGrpcResponse: null,
 });

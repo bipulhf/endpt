@@ -14,7 +14,7 @@ vi.mock("sonner", () => ({
 beforeEach(() => {
   useWorkspaceStore.setState({
     workspace: {
-      version: 3,
+      version: 4,
       folders: [],
       environments: [],
       activeEnvironmentId: null,

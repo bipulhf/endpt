@@ -6,14 +6,17 @@ import { EnvironmentManager } from "./components/EnvironmentManager";
 import { RequestEditor } from "./components/RequestEditor";
 import { ResponsePane } from "./components/ResponsePane";
 import { Sidebar } from "./components/Sidebar";
-import { loadLocalData, saveLocalData } from "./services/ipc";
+import {
+  listenStreamEvents,
+  loadLocalData,
+  saveLocalData,
+} from "./services/ipc";
+import { useRealtimeStore } from "./store/useRealtimeStore";
 import { useThemeStore } from "./store/useThemeStore";
 import { useWorkspaceStore } from "./store/useWorkspaceStore";
-import { HttpResponse } from "./types";
 
 function App() {
-  const [response, setResponse] = useState<HttpResponse | null>(null);
-  const [isSending, setIsSending] = useState(false);
+  const [isBusy, setIsBusy] = useState(false);
   const [mobileView, setMobileView] = useState<
     "workspace" | "editor" | "response"
   >("workspace");
@@ -22,11 +25,11 @@ function App() {
 
   const applyTheme = useThemeStore((state) => state.applyTheme);
   const theme = useThemeStore((state) => state.theme);
-  const workspace = useWorkspaceStore((state) => state.workspace);
   const loadWorkspaceFromData = useWorkspaceStore(
     (state) => state.loadWorkspaceFromData,
   );
-  const activeRequestId = useWorkspaceStore((state) => state.activeRequestId);
+  const appendEvent = useRealtimeStore((state) => state.appendEvent);
+  const setSessionState = useRealtimeStore((state) => state.setSessionState);
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -73,17 +76,70 @@ function App() {
   }, [loadWorkspaceFromData]);
 
   useEffect(() => {
-    if (!activeRequestId) {
-      setResponse(null);
-      return;
-    }
+    let unsubscribed = false;
+    let unlisten: (() => void) | null = null;
 
-    const activeRequest = workspace.folders
-      .flatMap((folder) => folder.requests)
-      .find((request) => request.id === activeRequestId);
+    const bindEvents = async (): Promise<void> => {
+      try {
+        const off = await listenStreamEvents((event) => {
+          appendEvent(event);
 
-    setResponse(activeRequest?.lastResponse ?? null);
-  }, [activeRequestId, workspace.folders]);
+          if (event.direction === "error") {
+            setSessionState(event.request_id, {
+              protocol: event.protocol,
+              status: "error",
+              sessionId: event.session_id,
+              error: event.payload,
+            });
+            return;
+          }
+
+          if (event.direction === "status") {
+            const statusText = (event.payload || "").toLowerCase();
+            const mappedStatus = statusText.includes("connecting")
+              ? "connecting"
+              : statusText.includes("disconnect") || statusText.includes("closed")
+                ? "disconnected"
+                : statusText.includes("connected") || statusText.includes("open")
+                  ? "connected"
+                  : undefined;
+
+            if (mappedStatus) {
+              setSessionState(event.request_id, {
+                protocol: event.protocol,
+                status: mappedStatus,
+                sessionId:
+                  mappedStatus === "disconnected" ? null : event.session_id,
+                error: null,
+              });
+            }
+          }
+        });
+
+        if (unsubscribed) {
+          off();
+          return;
+        }
+
+        unlisten = off;
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to subscribe to stream events";
+        toast.error(message);
+      }
+    };
+
+    void bindEvents();
+
+    return () => {
+      unsubscribed = true;
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [appendEvent, setSessionState]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
@@ -134,11 +190,6 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [saveWorkspace]);
 
-  const handleResponse = (nextResponse: HttpResponse): void => {
-    setResponse(nextResponse);
-    setMobileView("response");
-  };
-
   return (
     <div className="relative h-[100dvh] w-full overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0">
@@ -169,13 +220,12 @@ function App() {
                 )}
                 {mobileView === "editor" && (
                   <RequestEditor
-                    onResponse={handleResponse}
-                    isSending={isSending}
-                    setIsSending={setIsSending}
+                    isBusy={isBusy}
+                    setIsBusy={setIsBusy}
                   />
                 )}
                 {mobileView === "response" && (
-                  <ResponsePane response={response} isSending={isSending} />
+                  <ResponsePane isBusy={isBusy} />
                 )}
               </div>
             </div>
@@ -200,9 +250,8 @@ function App() {
                   <Group orientation="vertical" className="h-full">
                     <Panel id="editor" defaultSize={"55%"} minSize={"25%"}>
                       <RequestEditor
-                        onResponse={handleResponse}
-                        isSending={isSending}
-                        setIsSending={setIsSending}
+                        isBusy={isBusy}
+                        setIsBusy={setIsBusy}
                       />
                     </Panel>
 
@@ -212,7 +261,7 @@ function App() {
                     />
 
                     <Panel id="response" defaultSize={"45%"} minSize={"15%"}>
-                      <ResponsePane response={response} isSending={isSending} />
+                      <ResponsePane isBusy={isBusy} />
                     </Panel>
                   </Group>
                 </Panel>

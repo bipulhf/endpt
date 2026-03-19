@@ -72,7 +72,7 @@ mod tests {
     fn export_then_import_roundtrip() {
         let path = temp_path("endpt_test_workspace.json");
         let original = json!({
-            "version": 3,
+            "version": 4,
             "activeEnvironmentId": "env_dev",
             "environments": [
                 {
@@ -103,8 +103,27 @@ mod tests {
                         {
                             "id": "r1",
                             "name": "Login",
+                            "protocol": "grpc",
                             "method": "POST",
                             "url": "https://api.example.com/login",
+                            "grpc": {
+                                "endpoint": "localhost:50051",
+                                "useTls": false,
+                                "protoFiles": ["/tmp/auth.proto"],
+                                "methodPath": "/auth.AuthService/Login",
+                                "metadata": [],
+                                "payloadJson": "{\"email\":\"a@b.com\"}"
+                            },
+                            "websocket": {
+                                "url": "",
+                                "headers": [],
+                                "subprotocol": "",
+                                "initialMessage": ""
+                            },
+                            "sse": {
+                                "url": "",
+                                "headers": []
+                            },
                             "headers": [],
                             "body": "{\"user\":\"test\"}"
                         }

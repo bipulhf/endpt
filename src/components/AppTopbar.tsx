@@ -1,5 +1,4 @@
 import {
-  Boxes,
   Braces,
   CheckCheck,
   FolderTree,

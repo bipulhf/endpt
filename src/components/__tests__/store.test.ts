@@ -5,7 +5,7 @@ import { useWorkspaceStore } from "../../store/useWorkspaceStore";
 beforeEach(() => {
   useWorkspaceStore.setState({
     workspace: {
-      version: 3,
+      version: 4,
       folders: [],
       environments: [],
       activeEnvironmentId: null,
@@ -103,9 +103,39 @@ describe("workspace normalization", () => {
   it("upgrades old workspaces with env defaults", () => {
     const normalized = normalizeWorkspace({ version: 2, folders: [] });
 
-    expect(normalized.version).toBe(3);
+    expect(normalized.version).toBe(4);
     expect(normalized.environments).toEqual([]);
     expect(normalized.activeEnvironmentId).toBeNull();
+  });
+
+  it("defaults missing protocol fields to http", () => {
+    const normalized = normalizeWorkspace({
+      version: 3,
+      folders: [
+        {
+          id: "folder_1",
+          name: "Folder",
+          collapsed: false,
+          requests: [
+            {
+              id: "request_1",
+              name: "Legacy",
+              method: "GET",
+              url: "https://example.com",
+              headers: [],
+              queryParams: [],
+              auth: { type: "none" },
+              body: { type: "none" },
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(normalized.folders[0].requests[0].protocol).toBe("http");
+    expect(normalized.folders[0].requests[0].grpc.endpoint).toBe("");
+    expect(normalized.folders[0].requests[0].websocket.url).toBe("");
+    expect(normalized.folders[0].requests[0].sse.url).toBe("");
   });
 });
 

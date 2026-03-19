@@ -34,7 +34,7 @@ const setupWorkspace = (withVariable: boolean): void => {
 
   useWorkspaceStore.setState({
     workspace: {
-      version: 3,
+      version: 4,
       folders: [
         {
           id: "folder_1",
@@ -62,9 +62,8 @@ describe("RequestEditor environment resolution", () => {
 
     render(
       <RequestEditor
-        onResponse={vi.fn()}
-        isSending={false}
-        setIsSending={vi.fn()}
+        isBusy={false}
+        setIsBusy={vi.fn()}
       />,
     );
 
@@ -87,9 +86,8 @@ describe("RequestEditor environment resolution", () => {
 
     render(
       <RequestEditor
-        onResponse={vi.fn()}
-        isSending={false}
-        setIsSending={vi.fn()}
+        isBusy={false}
+        setIsBusy={vi.fn()}
       />,
     );
 
