@@ -12,6 +12,13 @@ import { useWorkspaceStore } from "../store/useWorkspaceStore";
 import { ThemeToggle } from "./ThemeToggle";
 import { UpdateChecker } from "./UpdateChecker";
 import { Button } from "./ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 interface AppTopbarProps {
   mobileView: "workspace" | "editor" | "response";
@@ -29,6 +36,9 @@ export const AppTopbar = ({
   saved,
 }: AppTopbarProps): ReactElement => {
   const workspace = useWorkspaceStore((state) => state.workspace);
+  const setActiveEnvironment = useWorkspaceStore(
+    (state) => state.setActiveEnvironment,
+  );
 
   const stats = useMemo(() => {
     const folderCount = workspace.folders.length;
@@ -64,23 +74,28 @@ export const AppTopbar = ({
           </div>
         </div>
 
-        <div className="hidden min-w-0 flex-1 items-center justify-center gap-2.5 lg:flex">
-          <div className="metric-card inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs text-muted-foreground">
-            <FolderTree size={13} />
-            <span>{stats.folderCount} folders</span>
-          </div>
-          <div className="metric-card inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs text-muted-foreground">
-            <Boxes size={13} />
-            <span>{stats.requestCount} requests</span>
-          </div>
-          <div className="metric-card inline-flex max-w-[16rem] items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs text-muted-foreground">
-            <Braces size={13} />
-            <span className="truncate">{stats.activeEnvironmentName}</span>
-            <span className="text-[10px] opacity-80">({stats.envCount})</span>
-          </div>
-        </div>
-
         <div className="flex items-center gap-1.5">
+          <div className="hidden lg:block">
+            <Select
+              value={workspace.activeEnvironmentId ?? "__none__"}
+              onValueChange={(value) =>
+                setActiveEnvironment(value === "__none__" ? null : value)
+              }
+            >
+              <SelectTrigger className="h-9 w-[12rem] text-xs">
+                <SelectValue placeholder="No Environment" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">No Environment</SelectItem>
+                {workspace.environments.map((environment) => (
+                  <SelectItem key={environment.id} value={environment.id}>
+                    {environment.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button
             variant="outline"
             size="sm"
@@ -118,7 +133,32 @@ export const AppTopbar = ({
         </div>
       </div>
 
-      <div className="relative mt-2.5 grid grid-cols-3 gap-1.5 lg:hidden">
+      <div className="relative mt-2.5 flex items-center gap-1.5 lg:hidden">
+        <Select
+          value={workspace.activeEnvironmentId ?? "__none__"}
+          onValueChange={(value) =>
+            setActiveEnvironment(value === "__none__" ? null : value)
+          }
+        >
+          <SelectTrigger className="h-9 max-w-[11rem] text-xs">
+            <SelectValue placeholder="No Environment" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">No Environment</SelectItem>
+            {workspace.environments.map((environment) => (
+              <SelectItem key={environment.id} value={environment.id}>
+                {environment.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="metric-card inline-flex min-w-0 items-center gap-1 rounded-xl px-2 py-1 text-[11px] text-muted-foreground">
+          <Braces size={12} />
+          <span className="truncate">{stats.activeEnvironmentName}</span>
+        </div>
+      </div>
+
+      <div className="relative mt-1.5 grid grid-cols-3 gap-1.5 lg:hidden">
         <button
           type="button"
           onClick={() => onChangeMobileView("workspace")}
