@@ -1,10 +1,4 @@
-import {
-  Braces,
-  Download,
-  FolderPlus,
-  Save,
-  Upload,
-} from "lucide-react";
+import { Download, FolderPlus, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -15,13 +9,9 @@ import { ReactElement, useState } from "react";
 
 interface SidebarProps {
   onRequestSelected?: () => void;
-  onOpenEnvironmentManager?: () => void;
 }
 
-export const Sidebar = ({
-  onRequestSelected,
-  onOpenEnvironmentManager,
-}: SidebarProps): ReactElement => {
+export const Sidebar = ({ onRequestSelected }: SidebarProps): ReactElement => {
   const workspace = useWorkspaceStore((state) => state.workspace);
   const activeRequestId = useWorkspaceStore((state) => state.activeRequestId);
   const createFolder = useWorkspaceStore((state) => state.createFolder);
@@ -101,17 +91,6 @@ export const Sidebar = ({
     setEditingItem(null);
   };
 
-  const handleSave = async (): Promise<void> => {
-    try {
-      await saveLocalData(workspace);
-      toast.success("Workspace saved");
-    } catch (saveError) {
-      const message =
-        saveError instanceof Error ? saveError.message : "Save failed";
-      toast.error(message);
-    }
-  };
-
   const handleExport = async (): Promise<void> => {
     try {
       await exportData(workspace);
@@ -172,35 +151,13 @@ export const Sidebar = ({
   return (
     <aside className="flex h-full w-full min-w-0 flex-col overflow-hidden bg-gradient-to-b from-card/95 via-card/80 to-background/75">
       <div className="border-b border-border/70 p-1.5 sm:p-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <img src="/icon.png" alt="Endpt" className="h-7 w-7 sm:h-8 sm:w-8" />
-            <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-              Endpt
-            </h1>
-          </div>
+        <div>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground sm:text-base">
+            Collections
+          </h2>
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onOpenEnvironmentManager}
-            className="flex-1 min-w-[5.5rem]"
-          >
-            <Braces size={14} />
-            Envs
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => {
-              void handleSave();
-            }}
-            className="flex-1 min-w-[5.5rem]"
-          >
-            <Save size={14} />
-            Save
-          </Button>
           <Button
             variant="secondary"
             size="sm"
@@ -305,7 +262,7 @@ export const Sidebar = ({
 
       <div className="border-t border-border/70 px-4 py-3">
         <p className="text-[11px] leading-5 text-muted-foreground">
-          Made with Copilot ❤️
+          Endpt desktop API client
         </p>
       </div>
     </aside>
