@@ -43,9 +43,26 @@ jobs:
 
       - name: Sync version from tag
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "Syncing version to $VERSION"
-          npm version "$VERSION" --no-git-tag-version
+          normalize_version() {
+            local raw="$1"
+            if [[ "$raw" =~ ^([0-9]+)$ ]]; then
+              echo "${BASH_REMATCH[1]}.0.0"
+              return
+            fi
+            if [[ "$raw" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+              echo "${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0"
+              return
+            fi
+            if [[ "$raw" =~ ^([0-9]+)\.([0-9]+)-(.+)$ ]]; then
+              echo "${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0-${BASH_REMATCH[3]}"
+              return
+            fi
+            echo "$raw"
+          }
+          RAW_VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="$(normalize_version "$RAW_VERSION")"
+          echo "Syncing version from tag ${GITHUB_REF_NAME} to $VERSION"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
           node -e "
             const fs = require('fs');
             const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
@@ -116,9 +133,26 @@ jobs:
       - name: Sync version from tag
         shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "Syncing version to $VERSION"
-          npm version "$VERSION" --no-git-tag-version
+          normalize_version() {
+            local raw="$1"
+            if [[ "$raw" =~ ^([0-9]+)$ ]]; then
+              echo "${BASH_REMATCH[1]}.0.0"
+              return
+            fi
+            if [[ "$raw" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+              echo "${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0"
+              return
+            fi
+            if [[ "$raw" =~ ^([0-9]+)\.([0-9]+)-(.+)$ ]]; then
+              echo "${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0-${BASH_REMATCH[3]}"
+              return
+            fi
+            echo "$raw"
+          }
+          RAW_VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="$(normalize_version "$RAW_VERSION")"
+          echo "Syncing version from tag ${GITHUB_REF_NAME} to $VERSION"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
           node -e "
             const fs = require('fs');
             const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
