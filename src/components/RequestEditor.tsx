@@ -1,4 +1,10 @@
-import { Send } from "lucide-react";
+import {
+  Globe,
+  Radio,
+  Send,
+  Waypoints,
+  Waves,
+} from "lucide-react";
 import { ReactElement, useMemo, useState } from "react";
 import {
   executeGrpcUnaryRequest,
@@ -55,7 +61,15 @@ interface RequestEditorProps {
 
 type HttpEditorTab = "params" | "headers" | "auth" | "body";
 
-const PROTOCOL_OPTIONS: RequestProtocol[] = ["http", "grpc", "websocket", "sse"];
+const PROTOCOL_OPTIONS: Array<{
+  value: RequestProtocol;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+}> = [
+  { value: "http", icon: Globe },
+  { value: "grpc", icon: Waypoints },
+  { value: "websocket", icon: Radio },
+  { value: "sse", icon: Waves },
+];
 
 const normalizeProtocol = (value: string): RequestProtocol => {
   if (value === "grpc" || value === "websocket" || value === "sse") {
@@ -572,26 +586,23 @@ export const RequestEditor = ({ isBusy, setIsBusy }: RequestEditorProps): ReactE
           onClose={closeRequestTab}
         />
 
-        <div className="panel-surface mb-2 rounded-[1rem] p-2.5 sm:rounded-[1.25rem] sm:p-3">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="panel-surface mb-1.5 rounded-[1rem] p-2 sm:rounded-[1.15rem]">
+          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0">
               <h3 className="truncate text-sm font-semibold tracking-tight text-foreground sm:text-base">
                 {activeRequest.name}
               </h3>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              <span className="rounded-full border border-border/60 bg-background/45 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                Protocol: {PROTOCOL_LABELS[activeProtocol]}
-              </span>
               {activeProtocol === "http" && (
                 <>
-                  <span className="rounded-full border border-border/60 bg-background/45 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  <span className="rounded-full border border-border/60 bg-background/45 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
                     Body: {activeRequest.body.type}
                   </span>
-                  <span className="rounded-full border border-border/60 bg-background/45 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  <span className="rounded-full border border-border/60 bg-background/45 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
                     {enabledParamCount} params
                   </span>
-                  <span className="rounded-full border border-border/60 bg-background/45 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  <span className="rounded-full border border-border/60 bg-background/45 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
                     {enabledHeaderCount} headers
                   </span>
                 </>
@@ -599,102 +610,103 @@ export const RequestEditor = ({ isBusy, setIsBusy }: RequestEditorProps): ReactE
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 lg:grid-cols-[11rem_minmax(0,1fr)] lg:items-center">
-            <Select
-              value={activeProtocol}
-              onValueChange={(value) => {
-                if (value === activeProtocol) {
-                  return;
-                }
-                setRequestProtocol(activeRequest.id, value as RequestProtocol);
-                setError("");
-              }}
-            >
-              <SelectTrigger className="h-10 w-full text-sm font-medium">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PROTOCOL_OPTIONS.map((protocol) => (
-                  <SelectItem key={protocol} value={protocol}>
-                    {PROTOCOL_LABELS[protocol]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {activeProtocol === "http" && (
-              <div className="grid grid-cols-1 gap-2 lg:grid-cols-[8.2rem_minmax(0,1fr)_7.4rem]">
-                <Select
-                  key={activeRequest.id}
-                  value={activeRequest.method}
-                  onValueChange={(value) => {
-                    if (value === activeRequest.method) {
+          <div className="mb-1.5 flex flex-wrap items-center gap-1">
+            {PROTOCOL_OPTIONS.map(({ value, icon: Icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={activeProtocol === value}
+                  onClick={() => {
+                    if (value === activeProtocol) {
                       return;
                     }
-                    updateRequest(activeRequest.id, { method: value as HttpMethod });
+                    setRequestProtocol(activeRequest.id, value);
+                    setError("");
                   }}
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-all ${
+                    activeProtocol === value
+                      ? "border-primary/30 bg-primary/10 text-primary shadow-lg shadow-primary/10"
+                      : "border-border/70 bg-background/45 text-muted-foreground hover:border-border hover:bg-accent/40 hover:text-foreground"
+                  }`}
                 >
-                  <SelectTrigger
-                    className={`h-10 w-full shrink-0 font-semibold ${METHOD_TEXT_COLORS[activeRequest.method]}`}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {HTTP_METHODS.map((method) => (
-                      <SelectItem
-                        key={method}
-                        value={method}
-                        className={METHOD_TEXT_COLORS[method]}
-                      >
-                        {method}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <EnvAutocompleteField
-                  value={activeRequest.url}
-                  onValueChange={(nextValue) =>
-                    updateRequest(activeRequest.id, { url: nextValue })
-                  }
-                  placeholder="https://api.example.com"
-                  className="control-field h-10 w-full rounded-xl px-3 py-2 text-sm text-foreground"
-                  dataUndoScope="workspace"
-                  onKeyDown={(event) => {
-                    if (
-                      event.key === "Enter" &&
-                      (!event.shiftKey || event.ctrlKey || event.metaKey)
-                    ) {
-                      event.preventDefault();
-                      void handleHttpSend();
-                    }
-                  }}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleHttpSend();
-                  }}
-                  disabled={isBusy}
-                  className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-200 hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Send size={14} />
-                  {isBusy ? "Sending" : "Send"}
+                  <Icon size={13} />
+                  {PROTOCOL_LABELS[value]}
                 </button>
-              </div>
-            )}
+              ))}
           </div>
 
+          {activeProtocol === "http" && (
+            <div className="grid grid-cols-1 gap-2 lg:grid-cols-[8.2rem_minmax(0,1fr)_7.4rem]">
+              <Select
+                key={activeRequest.id}
+                value={activeRequest.method}
+                onValueChange={(value) => {
+                  if (value === activeRequest.method) {
+                    return;
+                  }
+                  updateRequest(activeRequest.id, { method: value as HttpMethod });
+                }}
+              >
+                <SelectTrigger
+                  className={`h-10 w-full shrink-0 font-semibold ${METHOD_TEXT_COLORS[activeRequest.method]}`}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {HTTP_METHODS.map((method) => (
+                    <SelectItem
+                      key={method}
+                      value={method}
+                      className={METHOD_TEXT_COLORS[method]}
+                    >
+                      {method}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <EnvAutocompleteField
+                value={activeRequest.url}
+                onValueChange={(nextValue) =>
+                  updateRequest(activeRequest.id, { url: nextValue })
+                }
+                placeholder="https://api.example.com"
+                className="control-field h-10 w-full rounded-xl px-3 py-2 text-sm text-foreground"
+                dataUndoScope="workspace"
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    (!event.shiftKey || event.ctrlKey || event.metaKey)
+                  ) {
+                    event.preventDefault();
+                    void handleHttpSend();
+                  }
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => {
+                  void handleHttpSend();
+                }}
+                disabled={isBusy}
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-200 hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Send size={14} />
+                {isBusy ? "Sending" : "Send"}
+              </button>
+            </div>
+          )}
+
           {resolutionPreview && hasResolverIssues(resolutionPreview) && (
-            <p className="mt-2 text-xs text-rose-300">
+            <p className="mt-1.5 text-xs text-rose-300">
               {formatResolverIssues(resolutionPreview).join(" | ")}
             </p>
           )}
         </div>
 
         {activeProtocol === "http" && (
-          <div className="mb-2 flex flex-wrap gap-1 rounded-[0.95rem] border border-border/70 bg-background/30 p-1">
+          <div className="mb-1.5 flex flex-wrap gap-1 rounded-[0.95rem] border border-border/70 bg-background/30 p-1">
             {(
               [
                 { key: "params" as const, label: "Params", count: enabledParamCount },
