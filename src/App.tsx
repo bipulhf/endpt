@@ -10,6 +10,7 @@ import { Toaster } from "sonner";
 import { RequestEditor } from "./components/RequestEditor";
 import { ResponsePane } from "./components/ResponsePane";
 import { Sidebar } from "./components/Sidebar";
+import { EnvironmentManager } from "./components/EnvironmentManager";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { UpdateChecker } from "./components/UpdateChecker";
 import { loadLocalData, saveLocalData } from "./services/ipc";
@@ -23,6 +24,7 @@ function App() {
   const [mobileView, setMobileView] = useState<
     "workspace" | "editor" | "response"
   >("workspace");
+  const [environmentManagerOpen, setEnvironmentManagerOpen] = useState(false);
   const applyTheme = useThemeStore((state) => state.applyTheme);
   const theme = useThemeStore((state) => state.theme);
   const [saved, setSaved] = useState(false);
@@ -195,7 +197,10 @@ function App() {
 
             <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
               {mobileView === "workspace" && (
-                <Sidebar onRequestSelected={() => setMobileView("editor")} />
+                <Sidebar
+                  onRequestSelected={() => setMobileView("editor")}
+                  onOpenEnvironmentManager={() => setEnvironmentManagerOpen(true)}
+                />
               )}
               {mobileView === "editor" && (
                 <RequestEditor
@@ -218,7 +223,10 @@ function App() {
                 minSize={"15%"}
                 maxSize={"35%"}
               >
-                <Sidebar onRequestSelected={() => setMobileView("editor")} />
+                <Sidebar
+                  onRequestSelected={() => setMobileView("editor")}
+                  onOpenEnvironmentManager={() => setEnvironmentManagerOpen(true)}
+                />
               </Panel>
               <Separator
                 className="bg-border transition-colors data-[separator]:hover:bg-primary/50 data-[separator]:active:bg-primary"
@@ -269,6 +277,10 @@ function App() {
           </div>
         </div>
       </div>
+      <EnvironmentManager
+        open={environmentManagerOpen}
+        onClose={() => setEnvironmentManagerOpen(false)}
+      />
     </div>
   );
 }

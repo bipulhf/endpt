@@ -1,8 +1,15 @@
 import { create } from "zustand";
 import { createId } from "../lib/utils";
 import { saveLocalData } from "../services/ipc";
-import { ApiRequest, Workspace } from "../types";
-import { createDefaultRequest, normalizeWorkspace } from "./defaults";
+import { ApiRequest, Environment, EnvironmentVariable, Workspace } from "../types";
+import {
+  createDefaultEnvironment,
+  createDefaultEnvironmentVariable,
+  createDefaultRequest,
+  ENV_KEY_PATTERN,
+  normalizeWorkspace,
+  WORKSPACE_VERSION,
+} from "./defaults";
 
 type WorkspaceSnapshot = {
   workspace: Workspace;
@@ -13,6 +20,11 @@ type WorkspaceSnapshot = {
 type HistoryState = {
   past: WorkspaceSnapshot[];
   future: WorkspaceSnapshot[];
+};
+
+type VariableUpdateResult = {
+  ok: boolean;
+  error?: string;
 };
 
 interface WorkspaceState {
@@ -29,7 +41,21 @@ interface WorkspaceState {
   updateRequest: (requestId: string, partial: Partial<ApiRequest>) => void;
   setActiveRequest: (id: string | null) => void;
   closeRequestTab: (id: string) => void;
+  createEnvironment: (name?: string) => void;
+  renameEnvironment: (environmentId: string, name: string) => void;
+  deleteEnvironment: (environmentId: string) => void;
+  setActiveEnvironment: (environmentId: string | null) => void;
+  addEnvironmentVariable: (environmentId: string) => void;
+  updateEnvironmentVariable: (
+    environmentId: string,
+    variableId: string,
+    partial: Partial<EnvironmentVariable>,
+  ) => VariableUpdateResult;
+  deleteEnvironmentVariable: (environmentId: string, variableId: string) => void;
   getActiveRequest: () => ApiRequest | undefined;
+  getActiveEnvironment: () => Environment | null;
+  getActiveEnvironmentVariables: () => EnvironmentVariable[];
+  getActiveEnvironmentMap: () => Record<string, string>;
   loadWorkspaceFromData: (data: Workspace) => void;
   canUndo: () => boolean;
   canRedo: () => boolean;
@@ -38,11 +64,67 @@ interface WorkspaceState {
 }
 
 const defaultWorkspace: Workspace = {
-  version: 2,
+  version: WORKSPACE_VERSION,
   folders: [],
+  environments: [],
+  activeEnvironmentId: null,
 };
 
 const HISTORY_LIMIT = 120;
+
+const snapshotState = (state: WorkspaceState): WorkspaceSnapshot => ({
+  workspace: state.workspace,
+  activeRequestId: state.activeRequestId,
+  openRequestIds: state.openRequestIds,
+});
+
+const buildNextHistory = (state: WorkspaceState): HistoryState => {
+  const past = [...state.history.past, snapshotState(state)];
+  const trimmedPast =
+    past.length > HISTORY_LIMIT ? past.slice(past.length - HISTORY_LIMIT) : past;
+  return { past: trimmedPast, future: [] };
+};
+
+const findEnvironment = (
+  workspace: Workspace,
+  environmentId: string,
+): Environment | undefined =>
+  workspace.environments.find((environment) => environment.id === environmentId);
+
+const nextEnvironmentName = (workspace: Workspace): string => {
+  let index = workspace.environments.length + 1;
+  let candidate = `Environment ${index}`;
+  const existing = new Set(workspace.environments.map((environment) => environment.name));
+  while (existing.has(candidate)) {
+    index += 1;
+    candidate = `Environment ${index}`;
+  }
+  return candidate;
+};
+
+const validateVariableKey = (
+  key: string,
+  environment: Environment,
+  variableId: string,
+): string | null => {
+  if (!key) {
+    return null;
+  }
+
+  if (!ENV_KEY_PATTERN.test(key)) {
+    return "Variable key must match [A-Za-z_][A-Za-z0-9_]*";
+  }
+
+  const duplicate = environment.variables.some(
+    (variable) => variable.id !== variableId && variable.key === key,
+  );
+
+  if (duplicate) {
+    return `Variable key '${key}' already exists in this environment`;
+  }
+
+  return null;
+};
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   workspace: defaultWorkspace,
@@ -63,14 +145,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         return {};
       }
       const past = state.history.past.slice(0, -1);
-      const future = [
-        {
-          workspace: state.workspace,
-          activeRequestId: state.activeRequestId,
-          openRequestIds: state.openRequestIds,
-        },
-        ...state.history.future,
-      ];
+      const future = [snapshotState(state), ...state.history.future];
       return {
         workspace: previous.workspace,
         activeRequestId: previous.activeRequestId,
@@ -87,14 +162,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         return {};
       }
       const future = state.history.future.slice(1);
-      const past = [
-        ...state.history.past,
-        {
-          workspace: state.workspace,
-          activeRequestId: state.activeRequestId,
-          openRequestIds: state.openRequestIds,
-        },
-      ];
+      const past = [...state.history.past, snapshotState(state)];
       const trimmedPast =
         past.length > HISTORY_LIMIT ? past.slice(past.length - HISTORY_LIMIT) : past;
       return {
@@ -112,51 +180,27 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return;
     }
 
-    set((state) => {
-      const past = [
-        ...state.history.past,
-        {
-          workspace: state.workspace,
-          activeRequestId: state.activeRequestId,
-          openRequestIds: state.openRequestIds,
-        },
-      ];
-      const trimmedPast =
-        past.length > HISTORY_LIMIT ? past.slice(past.length - HISTORY_LIMIT) : past;
-      return {
-        workspace: {
-          ...state.workspace,
-          folders: [
-            ...state.workspace.folders,
-            { id: createId(), name: trimmedName, collapsed: false, requests: [] },
-          ],
-        },
-        history: { past: trimmedPast, future: [] },
-      };
-    });
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        folders: [
+          ...state.workspace.folders,
+          { id: createId(), name: trimmedName, collapsed: false, requests: [] },
+        ],
+      },
+      history: buildNextHistory(state),
+    }));
   },
 
   deleteFolder: (folderId) => {
     set((state) => {
       const folder = state.workspace.folders.find((item) => item.id === folderId);
-      const removedRequestIds = new Set(
-        folder?.requests.map((request) => request.id) ?? [],
-      );
+      const removedRequestIds = new Set(folder?.requests.map((request) => request.id) ?? []);
       const removedActive =
         folder?.requests.some((request) => request.id === state.activeRequestId) ?? false;
       const openRequestIds = state.openRequestIds.filter(
         (requestId) => !removedRequestIds.has(requestId),
       );
-      const past = [
-        ...state.history.past,
-        {
-          workspace: state.workspace,
-          activeRequestId: state.activeRequestId,
-          openRequestIds: state.openRequestIds,
-        },
-      ];
-      const trimmedPast =
-        past.length > HISTORY_LIMIT ? past.slice(past.length - HISTORY_LIMIT) : past;
 
       return {
         workspace: {
@@ -167,7 +211,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         },
         activeRequestId: removedActive ? null : state.activeRequestId,
         openRequestIds,
-        history: { past: trimmedPast, future: [] },
+        history: buildNextHistory(state),
       };
     });
   },
@@ -178,146 +222,86 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return;
     }
 
-    set((state) => {
-      const past = [
-        ...state.history.past,
-        {
-          workspace: state.workspace,
-          activeRequestId: state.activeRequestId,
-          openRequestIds: state.openRequestIds,
-        },
-      ];
-      const trimmedPast =
-        past.length > HISTORY_LIMIT ? past.slice(past.length - HISTORY_LIMIT) : past;
-      return {
-        workspace: {
-          ...state.workspace,
-          folders: state.workspace.folders.map((folder) =>
-            folder.id === folderId ? { ...folder, name: trimmedName } : folder,
-          ),
-        },
-        history: { past: trimmedPast, future: [] },
-      };
-    });
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        folders: state.workspace.folders.map((folder) =>
+          folder.id === folderId ? { ...folder, name: trimmedName } : folder,
+        ),
+      },
+      history: buildNextHistory(state),
+    }));
   },
 
   toggleFolderCollapse: (folderId) => {
-    set((state) => {
-      const past = [
-        ...state.history.past,
-        {
-          workspace: state.workspace,
-          activeRequestId: state.activeRequestId,
-          openRequestIds: state.openRequestIds,
-        },
-      ];
-      const trimmedPast =
-        past.length > HISTORY_LIMIT ? past.slice(past.length - HISTORY_LIMIT) : past;
-      return {
-        workspace: {
-          ...state.workspace,
-          folders: state.workspace.folders.map((folder) =>
-            folder.id === folderId
-              ? { ...folder, collapsed: !folder.collapsed }
-              : folder,
-          ),
-        },
-        history: { past: trimmedPast, future: [] },
-      };
-    });
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        folders: state.workspace.folders.map((folder) =>
+          folder.id === folderId
+            ? { ...folder, collapsed: !folder.collapsed }
+            : folder,
+        ),
+      },
+      history: buildNextHistory(state),
+    }));
   },
 
   createRequest: (folderId, name) => {
     const requestName = name.trim() || "New Request";
     const request = createDefaultRequest(requestName);
 
-    set((state) => {
-      const past = [
-        ...state.history.past,
-        {
-          workspace: state.workspace,
-          activeRequestId: state.activeRequestId,
-          openRequestIds: state.openRequestIds,
-        },
-      ];
-      const trimmedPast =
-        past.length > HISTORY_LIMIT ? past.slice(past.length - HISTORY_LIMIT) : past;
-      return {
-        workspace: {
-          ...state.workspace,
-          folders: state.workspace.folders.map((folder) =>
-            folder.id === folderId
-              ? { ...folder, requests: [...folder.requests, request] }
-              : folder,
-          ),
-        },
-        activeRequestId: request.id,
-        openRequestIds: state.openRequestIds.includes(request.id)
-          ? state.openRequestIds
-          : [...state.openRequestIds, request.id],
-        history: { past: trimmedPast, future: [] },
-      };
-    });
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        folders: state.workspace.folders.map((folder) =>
+          folder.id === folderId
+            ? { ...folder, requests: [...folder.requests, request] }
+            : folder,
+        ),
+      },
+      activeRequestId: request.id,
+      openRequestIds: state.openRequestIds.includes(request.id)
+        ? state.openRequestIds
+        : [...state.openRequestIds, request.id],
+      history: buildNextHistory(state),
+    }));
 
     void saveLocalData(get().workspace);
   },
 
   deleteRequest: (folderId, requestId) => {
-    set((state) => {
-      const past = [
-        ...state.history.past,
-        {
-          workspace: state.workspace,
-          activeRequestId: state.activeRequestId,
-          openRequestIds: state.openRequestIds,
-        },
-      ];
-      const trimmedPast =
-        past.length > HISTORY_LIMIT ? past.slice(past.length - HISTORY_LIMIT) : past;
-      return {
-        workspace: {
-          ...state.workspace,
-          folders: state.workspace.folders.map((folder) =>
-            folder.id === folderId
-              ? {
-                ...folder,
-                requests: folder.requests.filter((request) => request.id !== requestId),
-              }
-              : folder,
-          ),
-        },
-        activeRequestId: state.activeRequestId === requestId ? null : state.activeRequestId,
-        openRequestIds: state.openRequestIds.filter((id) => id !== requestId),
-        history: { past: trimmedPast, future: [] },
-      };
-    });
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        folders: state.workspace.folders.map((folder) =>
+          folder.id === folderId
+            ? {
+              ...folder,
+              requests: folder.requests.filter((request) => request.id !== requestId),
+            }
+            : folder,
+        ),
+      },
+      activeRequestId: state.activeRequestId === requestId ? null : state.activeRequestId,
+      openRequestIds: state.openRequestIds.filter((id) => id !== requestId),
+      history: buildNextHistory(state),
+    }));
   },
 
   updateRequest: (requestId, partial) => {
-    set((state) => {
-      const past = [
-        ...state.history.past,
-        {
-          workspace: state.workspace,
-          activeRequestId: state.activeRequestId,
-          openRequestIds: state.openRequestIds,
-        },
-      ];
-      const trimmedPast =
-        past.length > HISTORY_LIMIT ? past.slice(past.length - HISTORY_LIMIT) : past;
-      return {
-        workspace: {
-          ...state.workspace,
-          folders: state.workspace.folders.map((folder) => ({
-            ...folder,
-            requests: folder.requests.map((request) =>
-              request.id === requestId ? { ...request, ...partial } : request,
-            ),
-          })),
-        },
-        history: { past: trimmedPast, future: [] },
-      };
-    });
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        folders: state.workspace.folders.map((folder) => ({
+          ...folder,
+          requests: folder.requests.map((request) =>
+            request.id === requestId ? { ...request, ...partial } : request,
+          ),
+        })),
+      },
+      history: buildNextHistory(state),
+    }));
   },
 
   setActiveRequest: (id) => {
@@ -346,23 +330,184 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const isActiveClosing = state.activeRequestId === id;
       const fallbackId =
         openRequestIds[closeIndex] ?? openRequestIds[closeIndex - 1] ?? null;
-      const past = [
-        ...state.history.past,
-        {
-          workspace: state.workspace,
-          activeRequestId: state.activeRequestId,
-          openRequestIds: state.openRequestIds,
-        },
-      ];
-      const trimmedPast =
-        past.length > HISTORY_LIMIT ? past.slice(past.length - HISTORY_LIMIT) : past;
 
       return {
         openRequestIds,
         activeRequestId: isActiveClosing ? fallbackId : state.activeRequestId,
-        history: { past: trimmedPast, future: [] },
+        history: buildNextHistory(state),
       };
     });
+  },
+
+  createEnvironment: (name) => {
+    set((state) => {
+      const trimmedName = name?.trim() || nextEnvironmentName(state.workspace);
+      const environment = createDefaultEnvironment(trimmedName);
+      return {
+        workspace: {
+          ...state.workspace,
+          environments: [...state.workspace.environments, environment],
+          activeEnvironmentId: state.workspace.activeEnvironmentId ?? environment.id,
+        },
+        history: buildNextHistory(state),
+      };
+    });
+  },
+
+  renameEnvironment: (environmentId, name) => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      return;
+    }
+
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        environments: state.workspace.environments.map((environment) =>
+          environment.id === environmentId
+            ? { ...environment, name: trimmedName }
+            : environment,
+        ),
+      },
+      history: buildNextHistory(state),
+    }));
+  },
+
+  deleteEnvironment: (environmentId) => {
+    set((state) => {
+      const environments = state.workspace.environments.filter(
+        (environment) => environment.id !== environmentId,
+      );
+      const activeEnvironmentId =
+        state.workspace.activeEnvironmentId === environmentId
+          ? environments[0]?.id ?? null
+          : state.workspace.activeEnvironmentId;
+
+      return {
+        workspace: {
+          ...state.workspace,
+          environments,
+          activeEnvironmentId,
+        },
+        history: buildNextHistory(state),
+      };
+    });
+  },
+
+  setActiveEnvironment: (environmentId) => {
+    set((state) => {
+      if (
+        environmentId !== null &&
+        !findEnvironment(state.workspace, environmentId)
+      ) {
+        return {};
+      }
+
+      return {
+        workspace: {
+          ...state.workspace,
+          activeEnvironmentId: environmentId,
+        },
+        history: buildNextHistory(state),
+      };
+    });
+  },
+
+  addEnvironmentVariable: (environmentId) => {
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        environments: state.workspace.environments.map((environment) =>
+          environment.id === environmentId
+            ? {
+              ...environment,
+              variables: [...environment.variables, createDefaultEnvironmentVariable()],
+            }
+            : environment,
+        ),
+      },
+      history: buildNextHistory(state),
+    }));
+  },
+
+  updateEnvironmentVariable: (environmentId, variableId, partial) => {
+    let validationError: string | undefined;
+
+    set((state) => {
+      const environment = findEnvironment(state.workspace, environmentId);
+      if (!environment) {
+        validationError = "Environment not found";
+        return {};
+      }
+
+      const variable = environment.variables.find((item) => item.id === variableId);
+      if (!variable) {
+        validationError = "Variable not found";
+        return {};
+      }
+
+      const nextKey =
+        typeof partial.key === "string" ? partial.key.trim() : variable.key;
+      const nextValue =
+        typeof partial.value === "string" ? partial.value : variable.value;
+      const nextIsSecret =
+        typeof partial.isSecret === "boolean"
+          ? partial.isSecret
+          : variable.isSecret;
+
+      const keyError = validateVariableKey(nextKey, environment, variableId);
+      if (keyError) {
+        validationError = keyError;
+        return {};
+      }
+
+      return {
+        workspace: {
+          ...state.workspace,
+          environments: state.workspace.environments.map((current) =>
+            current.id === environmentId
+              ? {
+                ...current,
+                variables: current.variables.map((item) =>
+                  item.id === variableId
+                    ? {
+                      ...item,
+                      key: nextKey,
+                      value: nextValue,
+                      isSecret: nextIsSecret,
+                    }
+                    : item,
+                ),
+              }
+              : current,
+          ),
+        },
+        history: buildNextHistory(state),
+      };
+    });
+
+    return validationError
+      ? { ok: false, error: validationError }
+      : { ok: true };
+  },
+
+  deleteEnvironmentVariable: (environmentId, variableId) => {
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        environments: state.workspace.environments.map((environment) =>
+          environment.id === environmentId
+            ? {
+              ...environment,
+              variables: environment.variables.filter(
+                (variable) => variable.id !== variableId,
+              ),
+            }
+            : environment,
+        ),
+      },
+      history: buildNextHistory(state),
+    }));
   },
 
   getActiveRequest: () => {
@@ -374,6 +519,31 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       }
     }
     return undefined;
+  },
+
+  getActiveEnvironment: () => {
+    const state = get();
+    if (!state.workspace.activeEnvironmentId) {
+      return null;
+    }
+
+    return (
+      state.workspace.environments.find(
+        (environment) => environment.id === state.workspace.activeEnvironmentId,
+      ) ?? null
+    );
+  },
+
+  getActiveEnvironmentVariables: () => {
+    return get().getActiveEnvironment()?.variables ?? [];
+  },
+
+  getActiveEnvironmentMap: () => {
+    const map: Record<string, string> = {};
+    for (const variable of get().getActiveEnvironmentVariables()) {
+      map[variable.key] = variable.value;
+    }
+    return map;
   },
 
   loadWorkspaceFromData: (data) => {

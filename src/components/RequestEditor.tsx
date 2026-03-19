@@ -12,7 +12,13 @@ import { AuthEditor } from "./AuthEditor";
 import { ParamsEditor } from "./ParamsEditor";
 import { HeadersEditor, createHeader } from "./HeadersEditor";
 import { BodyEditor } from "./BodyEditor";
+import { EnvAutocompleteField } from "./EnvAutocompleteField";
 import { executeHttpRequest, saveLocalData } from "../services/ipc";
+import {
+  formatResolverIssues,
+  hasResolverIssues,
+  resolveRequestTemplate,
+} from "../services/env-resolver";
 import { useWorkspaceStore } from "../store/useWorkspaceStore";
 import { HTTP_METHODS, METHOD_TEXT_COLORS } from "../constants/methods";
 import {
@@ -43,6 +49,12 @@ export const RequestEditor = ({
   const updateRequest = useWorkspaceStore((state) => state.updateRequest);
   const setActiveRequest = useWorkspaceStore((state) => state.setActiveRequest);
   const closeRequestTab = useWorkspaceStore((state) => state.closeRequestTab);
+  const setActiveEnvironment = useWorkspaceStore(
+    (state) => state.setActiveEnvironment,
+  );
+  const getActiveEnvironmentVariables = useWorkspaceStore(
+    (state) => state.getActiveEnvironmentVariables,
+  );
   const [activeTab, setActiveTab] = useState<EditorTab>("params");
   const [error, setError] = useState("");
 
@@ -72,6 +84,16 @@ export const RequestEditor = ({
     }
     return null;
   }, [workspace.folders, activeRequestId]);
+
+  const activeEnvironment = useMemo(
+    () =>
+      workspace.environments.find(
+        (environment) => environment.id === workspace.activeEnvironmentId,
+      ) ?? null,
+    [workspace.environments, workspace.activeEnvironmentId],
+  );
+
+  const activeEnvironmentVariables = getActiveEnvironmentVariables();
 
   const updateHeader = (
     headerId: string,
@@ -122,11 +144,17 @@ export const RequestEditor = ({
       return;
     }
 
+    const resolved = resolveRequestTemplate(activeRequest, activeEnvironmentVariables);
+    if (hasResolverIssues(resolved.diagnostics)) {
+      setError(formatResolverIssues(resolved.diagnostics).join(" | "));
+      return;
+    }
+
     setIsSending(true);
     setError("");
 
     try {
-      const response = await executeHttpRequest(activeRequest);
+      const response = await executeHttpRequest(resolved.request);
       onResponse(response);
       updateRequest(activeRequest.id, { lastResponse: response });
       void saveLocalData(useWorkspaceStore.getState().workspace);
@@ -152,6 +180,13 @@ export const RequestEditor = ({
     }
     updateRequest(activeRequest.id, { queryParams });
   };
+
+  const resolutionPreview = useMemo(() => {
+    if (!activeRequest) {
+      return null;
+    }
+    return resolveRequestTemplate(activeRequest, activeEnvironmentVariables).diagnostics;
+  }, [activeRequest, activeEnvironmentVariables]);
 
   if (!activeRequest) {
     return (
@@ -192,6 +227,35 @@ export const RequestEditor = ({
             {activeRequest.name}
           </h3>
 
+          <div className="mb-2 flex items-center gap-2">
+            <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+              Env
+            </span>
+            <Select
+              value={workspace.activeEnvironmentId ?? "__none__"}
+              onValueChange={(value) =>
+                setActiveEnvironment(value === "__none__" ? null : value)
+              }
+            >
+              <SelectTrigger className="h-8 w-[14rem] text-xs">
+                <SelectValue placeholder="No Environment" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">No Environment</SelectItem>
+                {workspace.environments.map((environment) => (
+                  <SelectItem key={environment.id} value={environment.id}>
+                    {environment.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-muted-foreground">
+              {activeEnvironment
+                ? `${activeEnvironment.variables.length} vars`
+                : "0 vars"}
+            </span>
+          </div>
+
           <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
             <Select
               key={activeRequest.id}
@@ -218,13 +282,14 @@ export const RequestEditor = ({
               </SelectContent>
             </Select>
 
-            <input
+            <EnvAutocompleteField
               value={activeRequest.url}
-              onChange={(event) =>
-                updateRequest(activeRequest.id, { url: event.target.value })
+              onValueChange={(nextValue) =>
+                updateRequest(activeRequest.id, { url: nextValue })
               }
               placeholder="https://api.example.com"
               className="control-field h-9 w-full rounded-xl px-3 py-2 text-sm text-foreground"
+              dataUndoScope="workspace"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -245,6 +310,12 @@ export const RequestEditor = ({
               {isSending ? "Sending" : "Send"}
             </button>
           </div>
+
+          {resolutionPreview && hasResolverIssues(resolutionPreview) && (
+            <p className="mt-2 text-xs text-rose-300">
+              {formatResolverIssues(resolutionPreview).join(" | ")}
+            </p>
+          )}
         </div>
 
         {(() => {

@@ -72,7 +72,28 @@ mod tests {
     fn export_then_import_roundtrip() {
         let path = temp_path("endpt_test_workspace.json");
         let original = json!({
-            "version": 1,
+            "version": 3,
+            "activeEnvironmentId": "env_dev",
+            "environments": [
+                {
+                    "id": "env_dev",
+                    "name": "Development",
+                    "variables": [
+                        {
+                            "id": "v1",
+                            "key": "BASE_URL",
+                            "value": "https://api.dev.example.com",
+                            "isSecret": false
+                        },
+                        {
+                            "id": "v2",
+                            "key": "TOKEN",
+                            "value": "s3cr3t",
+                            "isSecret": true
+                        }
+                    ]
+                }
+            ],
             "folders": [
                 {
                     "id": "f1",

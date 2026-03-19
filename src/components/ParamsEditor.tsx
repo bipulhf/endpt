@@ -2,6 +2,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { ReactElement } from "react";
 import { createId } from "../lib/utils";
 import { QueryParam } from "../types";
+import { EnvAutocompleteField } from "./EnvAutocompleteField";
 
 interface ParamsEditorProps {
   params: QueryParam[];
@@ -65,15 +66,15 @@ export const ParamsEditor = ({
               </button>
             </div>
             <div className="space-y-2">
-              <input
+              <EnvAutocompleteField
                 value={param.key}
-                onChange={(e) => updateParam(param.id, "key", e.target.value)}
+                onValueChange={(value) => updateParam(param.id, "key", value)}
                 placeholder="key"
                 className="control-field rounded-xl px-2.5 py-2 text-sm text-foreground"
               />
-              <input
+              <EnvAutocompleteField
                 value={param.value}
-                onChange={(e) => updateParam(param.id, "value", e.target.value)}
+                onValueChange={(value) => updateParam(param.id, "value", value)}
                 placeholder="value"
                 className="control-field rounded-xl px-2.5 py-2 text-sm text-foreground"
               />
@@ -106,15 +107,15 @@ export const ParamsEditor = ({
                   className="h-4 w-4 rounded border-input accent-primary"
                 />
               </div>
-              <input
+              <EnvAutocompleteField
                 value={param.key}
-                onChange={(e) => updateParam(param.id, "key", e.target.value)}
+                onValueChange={(value) => updateParam(param.id, "key", value)}
                 placeholder="key"
                 className="control-field rounded-xl px-2.5 py-2 text-sm text-foreground"
               />
-              <input
+              <EnvAutocompleteField
                 value={param.value}
-                onChange={(e) => updateParam(param.id, "value", e.target.value)}
+                onValueChange={(value) => updateParam(param.id, "value", value)}
                 placeholder="value"
                 className="control-field rounded-xl px-2.5 py-2 text-sm text-foreground"
               />

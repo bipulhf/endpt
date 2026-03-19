@@ -1,4 +1,5 @@
 import {
+  Braces,
   Download,
   FolderPlus,
   Save,
@@ -14,9 +15,13 @@ import { ReactElement, useState } from "react";
 
 interface SidebarProps {
   onRequestSelected?: () => void;
+  onOpenEnvironmentManager?: () => void;
 }
 
-export const Sidebar = ({ onRequestSelected }: SidebarProps): ReactElement => {
+export const Sidebar = ({
+  onRequestSelected,
+  onOpenEnvironmentManager,
+}: SidebarProps): ReactElement => {
   const workspace = useWorkspaceStore((state) => state.workspace);
   const activeRequestId = useWorkspaceStore((state) => state.activeRequestId);
   const createFolder = useWorkspaceStore((state) => state.createFolder);
@@ -177,6 +182,15 @@ export const Sidebar = ({ onRequestSelected }: SidebarProps): ReactElement => {
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onOpenEnvironmentManager}
+            className="flex-1 min-w-[5.5rem]"
+          >
+            <Braces size={14} />
+            Envs
+          </Button>
           <Button
             size="sm"
             onClick={() => {

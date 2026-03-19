@@ -1,9 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { normalizeWorkspace } from "../../store/defaults";
 import { useWorkspaceStore } from "../../store/useWorkspaceStore";
 
 beforeEach(() => {
   useWorkspaceStore.setState({
-    workspace: { version: 2, folders: [] },
+    workspace: {
+      version: 3,
+      folders: [],
+      environments: [],
+      activeEnvironmentId: null,
+    },
     activeRequestId: null,
     openRequestIds: [],
     history: { past: [], future: [] },
@@ -52,6 +58,54 @@ describe("createRequest", () => {
 
     const state = useWorkspaceStore.getState();
     expect(state.activeRequestId).toBe(state.workspace.folders[0].requests[0].id);
+  });
+});
+
+describe("environments", () => {
+  it("creates and activates the first environment", () => {
+    useWorkspaceStore.getState().createEnvironment("Development");
+
+    const workspace = useWorkspaceStore.getState().workspace;
+    expect(workspace.environments).toHaveLength(1);
+    expect(workspace.environments[0].name).toBe("Development");
+    expect(workspace.activeEnvironmentId).toBe(workspace.environments[0].id);
+  });
+
+  it("enforces unique keys per environment", () => {
+    const state = useWorkspaceStore.getState();
+    state.createEnvironment("Development");
+
+    const environmentId = useWorkspaceStore.getState().workspace.environments[0].id;
+    state.addEnvironmentVariable(environmentId);
+    state.addEnvironmentVariable(environmentId);
+
+    const [first, second] =
+      useWorkspaceStore.getState().workspace.environments[0].variables;
+
+    expect(
+      state.updateEnvironmentVariable(environmentId, first.id, {
+        key: "BASE_URL",
+      }),
+    ).toEqual({ ok: true });
+
+    expect(
+      state.updateEnvironmentVariable(environmentId, second.id, {
+        key: "BASE_URL",
+      }),
+    ).toEqual({
+      ok: false,
+      error: "Variable key 'BASE_URL' already exists in this environment",
+    });
+  });
+});
+
+describe("workspace normalization", () => {
+  it("upgrades old workspaces with env defaults", () => {
+    const normalized = normalizeWorkspace({ version: 2, folders: [] });
+
+    expect(normalized.version).toBe(3);
+    expect(normalized.environments).toEqual([]);
+    expect(normalized.activeEnvironmentId).toBeNull();
   });
 });
 

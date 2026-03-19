@@ -14,6 +14,7 @@ import {
   RawLanguage,
   RequestBody,
 } from "../types";
+import { EnvAutocompleteField } from "./EnvAutocompleteField";
 
 interface BodyEditorProps {
   body: RequestBody;
@@ -122,17 +123,17 @@ export const BodyEditor = ({
               </SelectContent>
             </Select>
           )}
-          <textarea
+          <EnvAutocompleteField
             value={body.raw}
-            onChange={(event) =>
-              onChange({ ...body, raw: event.target.value })
-            }
+            onValueChange={(value) => onChange({ ...body, raw: value })}
             placeholder={
               body.type === "json"
                 ? '{\n  "key": "value"\n}'
                 : "Enter request body"
             }
             className="control-field min-h-[120px] w-full resize-y rounded-[1rem] p-2.5 font-mono text-sm text-foreground"
+            multiline
+            rows={8}
           />
         </>
       )}
@@ -186,13 +187,13 @@ export const BodyEditor = ({
                   </button>
                 </div>
                 <div className="space-y-2">
-                  <input
+                  <EnvAutocompleteField
                     value={row.key}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       updateFormRows(formMode, (rows) =>
                         rows.map((current) =>
                           current.id === row.id
-                            ? { ...current, key: event.target.value }
+                            ? { ...current, key: value }
                             : current,
                         ),
                       )
@@ -200,13 +201,13 @@ export const BodyEditor = ({
                     placeholder="Key"
                     className="control-field rounded-xl px-3 py-2 text-sm text-foreground"
                   />
-                  <input
+                  <EnvAutocompleteField
                     value={row.value}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       updateFormRows(formMode, (rows) =>
                         rows.map((current) =>
                           current.id === row.id
-                            ? { ...current, value: event.target.value }
+                            ? { ...current, value }
                             : current,
                         ),
                       )
@@ -279,26 +280,26 @@ export const BodyEditor = ({
                     }
                     className="mt-3 h-4 w-4 rounded border-input accent-primary"
                   />
-                  <input
+                  <EnvAutocompleteField
                     value={row.key}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       updateFormRows(formMode, (rows) =>
                         rows.map((current) =>
                           current.id === row.id
-                            ? { ...current, key: event.target.value }
+                            ? { ...current, key: value }
                             : current,
                         ),
                       )
                     }
                     className="control-field rounded-xl px-3 py-2.5 text-sm text-foreground"
                   />
-                  <input
+                  <EnvAutocompleteField
                     value={row.value}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       updateFormRows(formMode, (rows) =>
                         rows.map((current) =>
                           current.id === row.id
-                            ? { ...current, value: event.target.value }
+                            ? { ...current, value }
                             : current,
                         ),
                       )
@@ -381,28 +382,32 @@ export const BodyEditor = ({
           <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Query
           </label>
-          <textarea
+          <EnvAutocompleteField
             value={body.graphql.query}
-            onChange={(event) =>
+            onValueChange={(value) =>
               onChange({
                 ...body,
-                graphql: { ...body.graphql, query: event.target.value },
+                graphql: { ...body.graphql, query: value },
               })
             }
             className="control-field min-h-[100px] w-full resize-y rounded-[1rem] p-2.5 font-mono text-sm text-foreground"
+            multiline
+            rows={6}
           />
           <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Variables (JSON)
           </label>
-          <textarea
+          <EnvAutocompleteField
             value={body.graphql.variables}
-            onChange={(event) =>
+            onValueChange={(value) =>
               onChange({
                 ...body,
-                graphql: { ...body.graphql, variables: event.target.value },
+                graphql: { ...body.graphql, variables: value },
               })
             }
             className="control-field min-h-[80px] w-full resize-y rounded-[1rem] p-2.5 font-mono text-sm text-foreground"
+            multiline
+            rows={5}
           />
         </div>
       )}

@@ -3,8 +3,13 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { ApiRequest, HttpResponse, Workspace } from "../types";
 import { buildHeaders, buildUrl } from "./request-builder";
 
-const isWorkspace = (value: Workspace): boolean => {
-  return typeof value?.version === "number" && Array.isArray(value.folders);
+const isWorkspace = (value: unknown): value is Workspace => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const workspace = value as Partial<Workspace>;
+  return typeof workspace.version === "number" && Array.isArray(workspace.folders);
 };
 
 export const executeHttpRequest = async (request: ApiRequest): Promise<HttpResponse> => {

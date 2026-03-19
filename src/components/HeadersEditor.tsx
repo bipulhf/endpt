@@ -1,6 +1,7 @@
 import { ReactElement } from "react";
 import { createId } from "../lib/utils";
 import { HeaderRow } from "../types";
+import { EnvAutocompleteField } from "./EnvAutocompleteField";
 
 interface HeadersEditorProps {
   headers: HeaderRow[];
@@ -50,19 +51,15 @@ export const HeadersEditor = ({
             </button>
           </div>
           <div className="space-y-2">
-            <input
+            <EnvAutocompleteField
               value={header.key}
-              onChange={(event) =>
-                onUpdate(header.id, "key", event.target.value)
-              }
+              onValueChange={(value) => onUpdate(header.id, "key", value)}
               placeholder="Content-Type"
               className="control-field rounded-xl px-3 py-2 text-sm text-foreground"
             />
-            <input
+            <EnvAutocompleteField
               value={header.value}
-              onChange={(event) =>
-                onUpdate(header.id, "value", event.target.value)
-              }
+              onValueChange={(value) => onUpdate(header.id, "value", value)}
               placeholder="application/json"
               className="control-field rounded-xl px-3 py-2 text-sm text-foreground"
             />
@@ -93,19 +90,15 @@ export const HeadersEditor = ({
               }
               className="mt-3 h-4 w-4 rounded border-input accent-primary"
             />
-            <input
+            <EnvAutocompleteField
               value={header.key}
-              onChange={(event) =>
-                onUpdate(header.id, "key", event.target.value)
-              }
+              onValueChange={(value) => onUpdate(header.id, "key", value)}
               placeholder="Content-Type"
               className="control-field rounded-xl px-3 py-2.5 text-sm text-foreground"
             />
-            <input
+            <EnvAutocompleteField
               value={header.value}
-              onChange={(event) =>
-                onUpdate(header.id, "value", event.target.value)
-              }
+              onValueChange={(value) => onUpdate(header.id, "value", value)}
               placeholder="application/json"
               className="control-field rounded-xl px-3 py-2.5 text-sm text-foreground"
             />

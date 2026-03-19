@@ -1,6 +1,7 @@
 import { Key, Lock, Shield, ShieldOff } from "lucide-react";
 import { ReactElement } from "react";
 import { AuthConfig, AuthType } from "../types";
+import { EnvAutocompleteField } from "./EnvAutocompleteField";
 
 interface AuthEditorProps {
   auth: AuthConfig;
@@ -54,11 +55,10 @@ export const AuthEditor = ({
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Token
             </span>
-            <input
-              type="text"
+            <EnvAutocompleteField
               value={auth.bearer.token}
-              onChange={(e) =>
-                onChange({ ...auth, bearer: { token: e.target.value } })
+              onValueChange={(value) =>
+                onChange({ ...auth, bearer: { token: value } })
               }
               placeholder="Enter bearer token"
               className="control-field h-9 w-full rounded-xl px-3 py-2 text-sm text-foreground"
@@ -79,13 +79,12 @@ export const AuthEditor = ({
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Username
             </span>
-            <input
-              type="text"
+            <EnvAutocompleteField
               value={auth.basic.username}
-              onChange={(e) =>
+              onValueChange={(value) =>
                 onChange({
                   ...auth,
-                  basic: { ...auth.basic, username: e.target.value },
+                  basic: { ...auth.basic, username: value },
                 })
               }
               placeholder="Username"
@@ -96,13 +95,13 @@ export const AuthEditor = ({
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Password
             </span>
-            <input
+            <EnvAutocompleteField
               type="password"
               value={auth.basic.password}
-              onChange={(e) =>
+              onValueChange={(value) =>
                 onChange({
                   ...auth,
-                  basic: { ...auth.basic, password: e.target.value },
+                  basic: { ...auth.basic, password: value },
                 })
               }
               placeholder="Password"
@@ -124,13 +123,12 @@ export const AuthEditor = ({
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Key
             </span>
-            <input
-              type="text"
+            <EnvAutocompleteField
               value={auth.apiKey.key}
-              onChange={(e) =>
+              onValueChange={(value) =>
                 onChange({
                   ...auth,
-                  apiKey: { ...auth.apiKey, key: e.target.value },
+                  apiKey: { ...auth.apiKey, key: value },
                 })
               }
               placeholder="X-API-Key"
@@ -141,13 +139,12 @@ export const AuthEditor = ({
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Value
             </span>
-            <input
-              type="text"
+            <EnvAutocompleteField
               value={auth.apiKey.value}
-              onChange={(e) =>
+              onValueChange={(value) =>
                 onChange({
                   ...auth,
-                  apiKey: { ...auth.apiKey, value: e.target.value },
+                  apiKey: { ...auth.apiKey, value },
                 })
               }
               placeholder="your-api-key"

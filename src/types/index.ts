@@ -81,9 +81,24 @@ export interface Folder {
   requests: ApiRequest[];
 }
 
+export interface EnvironmentVariable {
+  id: string;
+  key: string;
+  value: string;
+  isSecret: boolean;
+}
+
+export interface Environment {
+  id: string;
+  name: string;
+  variables: EnvironmentVariable[];
+}
+
 export interface Workspace {
   version: number;
   folders: Folder[];
+  environments: Environment[];
+  activeEnvironmentId: string | null;
 }
 
 export interface HttpResponse {
