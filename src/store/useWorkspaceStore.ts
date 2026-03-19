@@ -155,7 +155,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set((state) => {
       const previous = state.history.past[state.history.past.length - 1];
       if (!previous) {
-        return {};
+        return state;
       }
       const past = state.history.past.slice(0, -1);
       const future = [snapshotState(state), ...state.history.future];
@@ -172,7 +172,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set((state) => {
       const next = state.history.future[0];
       if (!next) {
-        return {};
+        return state;
       }
       const future = state.history.future.slice(1);
       const past = [...state.history.past, snapshotState(state)];
@@ -303,18 +303,40 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   updateRequest: (requestId, partial) => {
-    set((state) => ({
-      workspace: {
-        ...state.workspace,
-        folders: state.workspace.folders.map((folder) => ({
-          ...folder,
-          requests: folder.requests.map((request) =>
-            request.id === requestId ? { ...request, ...partial } : request,
-          ),
-        })),
-      },
-      history: buildNextHistory(state),
-    }));
+    set((state) => {
+      let changed = false;
+
+      const folders = state.workspace.folders.map((folder) => ({
+        ...folder,
+        requests: folder.requests.map((request) => {
+          if (request.id !== requestId) {
+            return request;
+          }
+
+          const hasActualChange = (Object.keys(partial) as Array<keyof ApiRequest>)
+            .some((key) => !Object.is(request[key], partial[key]));
+
+          if (!hasActualChange) {
+            return request;
+          }
+
+          changed = true;
+          return { ...request, ...partial };
+        }),
+      }));
+
+      if (!changed) {
+        return state;
+      }
+
+      return {
+        workspace: {
+          ...state.workspace,
+          folders,
+        },
+        history: buildNextHistory(state),
+      };
+    });
   },
 
   setActiveRequest: (id) => {
@@ -336,7 +358,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set((state) => {
       const closeIndex = state.openRequestIds.indexOf(id);
       if (closeIndex < 0) {
-        return {};
+        return state;
       }
 
       const openRequestIds = state.openRequestIds.filter((requestId) => requestId !== id);
@@ -353,26 +375,43 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   setRequestProtocol: (requestId, protocol) => {
-    set((state) => ({
-      workspace: {
-        ...state.workspace,
-        folders: state.workspace.folders.map((folder) => ({
-          ...folder,
-          requests: folder.requests.map((request) =>
-            request.id === requestId
-              ? {
-                ...request,
-                protocol,
-                grpc: request.grpc ?? createDefaultGrpcConfig(),
-                websocket: request.websocket ?? createDefaultWebSocketConfig(),
-                sse: request.sse ?? createDefaultSseConfig(),
-              }
-              : request,
-          ),
-        })),
-      },
-      history: buildNextHistory(state),
-    }));
+    set((state) => {
+      let changed = false;
+
+      const folders = state.workspace.folders.map((folder) => ({
+        ...folder,
+        requests: folder.requests.map((request) => {
+          if (request.id !== requestId) {
+            return request;
+          }
+
+          if (request.protocol === protocol) {
+            return request;
+          }
+
+          changed = true;
+          return {
+            ...request,
+            protocol,
+            grpc: request.grpc ?? createDefaultGrpcConfig(),
+            websocket: request.websocket ?? createDefaultWebSocketConfig(),
+            sse: request.sse ?? createDefaultSseConfig(),
+          };
+        }),
+      }));
+
+      if (!changed) {
+        return state;
+      }
+
+      return {
+        workspace: {
+          ...state.workspace,
+          folders,
+        },
+        history: buildNextHistory(state),
+      };
+    });
   },
 
   updateGrpcConfig: (requestId, partial) => {
@@ -517,7 +556,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         environmentId !== null &&
         !findEnvironment(state.workspace, environmentId)
       ) {
-        return {};
+        return state;
+      }
+
+      if (state.workspace.activeEnvironmentId === environmentId) {
+        return state;
       }
 
       return {
@@ -554,13 +597,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const environment = findEnvironment(state.workspace, environmentId);
       if (!environment) {
         validationError = "Environment not found";
-        return {};
+        return state;
       }
 
       const variable = environment.variables.find((item) => item.id === variableId);
       if (!variable) {
         validationError = "Variable not found";
-        return {};
+        return state;
       }
 
       const nextKey =
@@ -575,7 +618,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const keyError = validateVariableKey(nextKey, environment, variableId);
       if (keyError) {
         validationError = keyError;
-        return {};
+        return state;
       }
 
       return {

@@ -57,12 +57,21 @@ type HttpEditorTab = "params" | "headers" | "auth" | "body";
 
 const PROTOCOL_OPTIONS: RequestProtocol[] = ["http", "grpc", "websocket", "sse"];
 
+const normalizeProtocol = (value: string): RequestProtocol => {
+  if (value === "grpc" || value === "websocket" || value === "sse") {
+    return value;
+  }
+  return "http";
+};
+
 const toTabLabel = (request: ApiRequest): string => {
-  if (request.protocol === "http") {
+  const protocol = normalizeProtocol(request.protocol);
+
+  if (protocol === "http") {
     return request.method;
   }
 
-  switch (request.protocol) {
+  switch (protocol) {
     case "grpc":
       return "gRPC";
     case "websocket":
@@ -123,6 +132,10 @@ export const RequestEditor = ({ isBusy, setIsBusy }: RequestEditorProps): ReactE
     }
     return null;
   }, [workspace.folders, activeRequestId]);
+
+  const activeProtocol = activeRequest
+    ? normalizeProtocol(activeRequest.protocol)
+    : "http";
 
   const activeEnvironmentVariables = getActiveEnvironmentVariables();
   const activeSession = activeRequest ? sessionsByRequest[activeRequest.id] ?? null : null;
@@ -568,9 +581,9 @@ export const RequestEditor = ({ isBusy, setIsBusy }: RequestEditorProps): ReactE
             </div>
             <div className="flex flex-wrap gap-1.5">
               <span className="rounded-full border border-border/60 bg-background/45 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                Protocol: {PROTOCOL_LABELS[activeRequest.protocol]}
+                Protocol: {PROTOCOL_LABELS[activeProtocol]}
               </span>
-              {activeRequest.protocol === "http" && (
+              {activeProtocol === "http" && (
                 <>
                   <span className="rounded-full border border-border/60 bg-background/45 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                     Body: {activeRequest.body.type}
@@ -588,8 +601,11 @@ export const RequestEditor = ({ isBusy, setIsBusy }: RequestEditorProps): ReactE
 
           <div className="grid grid-cols-1 gap-2 lg:grid-cols-[11rem_minmax(0,1fr)] lg:items-center">
             <Select
-              value={activeRequest.protocol}
+              value={activeProtocol}
               onValueChange={(value) => {
+                if (value === activeProtocol) {
+                  return;
+                }
                 setRequestProtocol(activeRequest.id, value as RequestProtocol);
                 setError("");
               }}
@@ -606,14 +622,17 @@ export const RequestEditor = ({ isBusy, setIsBusy }: RequestEditorProps): ReactE
               </SelectContent>
             </Select>
 
-            {activeRequest.protocol === "http" && (
+            {activeProtocol === "http" && (
               <div className="grid grid-cols-1 gap-2 lg:grid-cols-[8.2rem_minmax(0,1fr)_7.4rem]">
                 <Select
                   key={activeRequest.id}
                   value={activeRequest.method}
-                  onValueChange={(value) =>
-                    updateRequest(activeRequest.id, { method: value as HttpMethod })
-                  }
+                  onValueChange={(value) => {
+                    if (value === activeRequest.method) {
+                      return;
+                    }
+                    updateRequest(activeRequest.id, { method: value as HttpMethod });
+                  }}
                 >
                   <SelectTrigger
                     className={`h-10 w-full shrink-0 font-semibold ${METHOD_TEXT_COLORS[activeRequest.method]}`}
@@ -674,7 +693,7 @@ export const RequestEditor = ({ isBusy, setIsBusy }: RequestEditorProps): ReactE
           )}
         </div>
 
-        {activeRequest.protocol === "http" && (
+        {activeProtocol === "http" && (
           <div className="mb-2 flex flex-wrap gap-1 rounded-[0.95rem] border border-border/70 bg-background/30 p-1">
             {(
               [
@@ -707,11 +726,11 @@ export const RequestEditor = ({ isBusy, setIsBusy }: RequestEditorProps): ReactE
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-        {activeRequest.protocol === "http" && activeHttpTab === "params" && (
+        {activeProtocol === "http" && activeHttpTab === "params" && (
           <ParamsEditor params={activeRequest.queryParams ?? []} onChange={updateQueryParams} />
         )}
 
-        {activeRequest.protocol === "http" && activeHttpTab === "headers" && (
+        {activeProtocol === "http" && activeHttpTab === "headers" && (
           <HeadersEditor
             headers={activeRequest.headers}
             onUpdate={updateHeader}
@@ -720,15 +739,15 @@ export const RequestEditor = ({ isBusy, setIsBusy }: RequestEditorProps): ReactE
           />
         )}
 
-        {activeRequest.protocol === "http" && activeHttpTab === "auth" && (
+        {activeProtocol === "http" && activeHttpTab === "auth" && (
           <AuthEditor auth={activeRequest.auth} onChange={updateAuth} />
         )}
 
-        {activeRequest.protocol === "http" && activeHttpTab === "body" && (
+        {activeProtocol === "http" && activeHttpTab === "body" && (
           <BodyEditor body={activeRequest.body} onChange={updateBody} />
         )}
 
-        {activeRequest.protocol === "grpc" && (
+        {activeProtocol === "grpc" && (
           <GrpcRequestEditor
             request={activeRequest}
             methods={activeGrpcMethods}
@@ -741,7 +760,7 @@ export const RequestEditor = ({ isBusy, setIsBusy }: RequestEditorProps): ReactE
           />
         )}
 
-        {activeRequest.protocol === "websocket" && (
+        {activeProtocol === "websocket" && (
           <WebSocketRequestEditor
             request={activeRequest}
             session={activeSession}
@@ -753,7 +772,7 @@ export const RequestEditor = ({ isBusy, setIsBusy }: RequestEditorProps): ReactE
           />
         )}
 
-        {activeRequest.protocol === "sse" && (
+        {activeProtocol === "sse" && (
           <SseRequestEditor
             request={activeRequest}
             session={activeSession}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { Toaster, toast } from "sonner";
 import { AppTopbar } from "./components/AppTopbar";
@@ -17,6 +18,7 @@ import { useWorkspaceStore } from "./store/useWorkspaceStore";
 
 function App() {
   const [isBusy, setIsBusy] = useState(false);
+  const [isWorkspaceReady, setIsWorkspaceReady] = useState(false);
   const [mobileView, setMobileView] = useState<
     "workspace" | "editor" | "response"
   >("workspace");
@@ -69,6 +71,8 @@ function App() {
         }
       } catch {
         // Ignore if no local data exists yet.
+      } finally {
+        setIsWorkspaceReady(true);
       }
     };
 
@@ -141,6 +145,8 @@ function App() {
     };
   }, [appendEvent, setSessionState]);
 
+  const isBooting = !isWorkspaceReady;
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
       const key = event.key.toLowerCase();
@@ -189,6 +195,35 @@ function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [saveWorkspace]);
+
+  if (isBooting) {
+    return (
+      <div className="relative h-[100dvh] w-full overflow-hidden bg-background text-foreground">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-[-7rem] top-[-6rem] h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+          <div className="absolute right-[-4rem] top-10 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
+          <div className="absolute bottom-[-8rem] left-1/3 h-80 w-80 rounded-full bg-amber-300/10 blur-3xl" />
+        </div>
+
+        <div className="relative flex h-full w-full items-center justify-center px-4">
+          <div className="panel-surface w-full max-w-md rounded-[1.5rem] px-6 py-8 text-center sm:px-8 sm:py-10">
+            <img src="/icon.png" alt="Endpt" className="mx-auto h-12 w-12" />
+            <p className="eyebrow mt-4">Endpt</p>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+              Loading Workspace
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Initializing local data, request engine, and stream channels.
+            </p>
+            <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/50 px-4 py-2 text-sm text-muted-foreground">
+              <Loader2 size={16} className="animate-spin" />
+              Starting up...
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-[100dvh] w-full overflow-hidden bg-background text-foreground">

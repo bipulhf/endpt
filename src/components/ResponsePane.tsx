@@ -12,6 +12,15 @@ interface ResponsePaneProps {
   isBusy: boolean;
 }
 
+const EMPTY_EVENTS: StreamEvent[] = [];
+
+const normalizeProtocol = (value: string): "http" | "grpc" | "websocket" | "sse" => {
+  if (value === "grpc" || value === "websocket" || value === "sse") {
+    return value;
+  }
+  return "http";
+};
+
 const statusClass = (
   status: number,
 ): "success" | "info" | "warning" | "danger" => {
@@ -522,6 +531,9 @@ const StreamTimelineView = ({
 export const ResponsePane = ({ isBusy }: ResponsePaneProps): ReactElement => {
   const activeRequestId = useWorkspaceStore((state) => state.activeRequestId);
   const folders = useWorkspaceStore((state) => state.workspace.folders);
+  const sessionsByRequest = useRealtimeStore((state) => state.sessionsByRequest);
+  const eventsByRequest = useRealtimeStore((state) => state.eventsByRequest);
+  const clearEvents = useRealtimeStore((state) => state.clearEvents);
 
   const activeRequest = useMemo(() => {
     if (!activeRequestId) {
@@ -538,13 +550,9 @@ export const ResponsePane = ({ isBusy }: ResponsePaneProps): ReactElement => {
     return null;
   }, [activeRequestId, folders]);
 
-  const session = useRealtimeStore((state) =>
-    activeRequest ? state.sessionsByRequest[activeRequest.id] ?? null : null,
-  );
-  const events = useRealtimeStore((state) =>
-    activeRequest ? state.eventsByRequest[activeRequest.id] ?? [] : [],
-  );
-  const clearEvents = useRealtimeStore((state) => state.clearEvents);
+  const session = activeRequest ? sessionsByRequest[activeRequest.id] ?? null : null;
+  const events = activeRequest ? eventsByRequest[activeRequest.id] ?? EMPTY_EVENTS : EMPTY_EVENTS;
+  const activeProtocol = activeRequest ? normalizeProtocol(activeRequest.protocol) : "http";
 
   if (!activeRequest) {
     return (
@@ -564,15 +572,15 @@ export const ResponsePane = ({ isBusy }: ResponsePaneProps): ReactElement => {
   return (
     <section className="flex h-full min-w-0 flex-col overflow-y-auto overflow-x-hidden">
       <div className="panel-surface-strong flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-none border-0">
-        {activeRequest.protocol === "http" && (
+        {activeProtocol === "http" && (
           <HttpResponseView response={activeRequest.lastResponse ?? null} isBusy={isBusy} />
         )}
 
-        {activeRequest.protocol === "grpc" && (
+        {activeProtocol === "grpc" && (
           <GrpcResponseView response={activeRequest.lastGrpcResponse ?? null} isBusy={isBusy} />
         )}
 
-        {(activeRequest.protocol === "websocket" || activeRequest.protocol === "sse") && (
+        {(activeProtocol === "websocket" || activeProtocol === "sse") && (
           <StreamTimelineView
             events={events}
             isBusy={isBusy}

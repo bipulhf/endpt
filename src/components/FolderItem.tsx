@@ -2,7 +2,7 @@ import { ChevronDown, ChevronRight, FilePlus, Trash2 } from "lucide-react";
 import { ReactElement } from "react";
 import { METHOD_BADGE_CLASSES } from "../constants/methods";
 import { PROTOCOL_BADGE_CLASSES, PROTOCOL_LABELS } from "../constants/protocols";
-import { ApiRequest, Folder } from "../types";
+import { ApiRequest, Folder, RequestProtocol } from "../types";
 
 export type EditingItem =
   | { kind: "folder"; id: string; value: string }
@@ -26,7 +26,13 @@ interface FolderItemProps {
 }
 
 const requestBadge = (request: ApiRequest): { label: string; className: string } => {
-  if (request.protocol === "http") {
+  const protocol: RequestProtocol = request.protocol === "grpc" ||
+    request.protocol === "websocket" ||
+    request.protocol === "sse"
+    ? request.protocol
+    : "http";
+
+  if (protocol === "http") {
     return {
       label: request.method,
       className: METHOD_BADGE_CLASSES[request.method],
@@ -34,25 +40,31 @@ const requestBadge = (request: ApiRequest): { label: string; className: string }
   }
 
   return {
-    label: PROTOCOL_LABELS[request.protocol].toUpperCase(),
-    className: PROTOCOL_BADGE_CLASSES[request.protocol],
+    label: PROTOCOL_LABELS[protocol].toUpperCase(),
+    className: PROTOCOL_BADGE_CLASSES[protocol],
   };
 };
 
 const requestPreview = (request: ApiRequest): string => {
-  if (request.protocol === "http") {
+  const protocol: RequestProtocol = request.protocol === "grpc" ||
+    request.protocol === "websocket" ||
+    request.protocol === "sse"
+    ? request.protocol
+    : "http";
+
+  if (protocol === "http") {
     return request.url || "No URL yet";
   }
 
-  if (request.protocol === "grpc") {
-    return request.grpc.endpoint || "No endpoint yet";
+  if (protocol === "grpc") {
+    return request.grpc?.endpoint || "No endpoint yet";
   }
 
-  if (request.protocol === "websocket") {
-    return request.websocket.url || "No URL yet";
+  if (protocol === "websocket") {
+    return request.websocket?.url || "No URL yet";
   }
 
-  return request.sse.url || "No URL yet";
+  return request.sse?.url || "No URL yet";
 };
 
 export const FolderItem = ({
